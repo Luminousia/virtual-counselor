@@ -302,30 +302,29 @@ const VRMModel: React.FC<VRMModelProps> = ({
 
     console.log('[VRMModel] 开始加载模型:', modelUrl);
 
-    // 若为 .gz 压缩包，先在浏览器端解压再交给 GLTFLoader
-    const resolveModelUrl = async (url: string): Promise<string> => {
-      if (!url.endsWith('.gz')) return url;
-      console.log('[VRMModel] 检测到 .gz，正在下载并解压...');
-      const resp = await fetch(url);
-      if (!resp.ok || !resp.body) throw new Error(`下载模型失败: ${resp.status}`);
-      const ds = new DecompressionStream('gzip');
-      const blob = await new Response(resp.body.pipeThrough(ds)).blob();
-      return URL.createObjectURL(blob);
-    };
+    // 用 async IIFE 处理 .gz 解压，因为 useEffect 回调本身不能是 async
+    (async () => {
+      // 若为 .gz 压缩包，先在浏览器端解压再交给 GLTFLoader
+      let resolvedModelUrl = modelUrl;
+      if (modelUrl.endsWith('.gz')) {
+        try {
+          console.log('[VRMModel] 检测到 .gz，正在下载并解压...');
+          const resp = await fetch(modelUrl);
+          if (!resp.ok || !resp.body) throw new Error(`下载模型失败: ${resp.status}`);
+          const ds = new DecompressionStream('gzip');
+          const blob = await new Response(resp.body.pipeThrough(ds)).blob();
+          resolvedModelUrl = URL.createObjectURL(blob);
+        } catch (e) {
+          const err = e instanceof Error ? e : new Error(String(e));
+          console.error('[VRMModel] 模型预处理失败:', err);
+          setError(err.message);
+          onError?.(err);
+          return;
+        }
+      }
 
-    let resolvedModelUrl: string;
-    try {
-      resolvedModelUrl = await resolveModelUrl(modelUrl);
-    } catch (e) {
-      const err = e instanceof Error ? e : new Error(String(e));
-      console.error('[VRMModel] 模型预处理失败:', err);
-      setError(err.message);
-      onError?.(err);
-      return;
-    }
-
-    loader.load(
-      resolvedModelUrl,
+      loader.load(
+        resolvedModelUrl,
       (gltf) => {
         const vrm = gltf.userData.vrm as VRM;
         if (!vrm) {
@@ -444,6 +443,7 @@ const VRMModel: React.FC<VRMModelProps> = ({
         onError?.(error);
       }
     );
+    })(); // 结束 async IIFE
 
     // 渲染循环
     let frameCount = 0;
