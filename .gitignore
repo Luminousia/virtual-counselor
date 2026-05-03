@@ -50,3 +50,8 @@ ENV/
 genie-tts-server/CharacterModels/
 genie-tts-server/GenieData/
 genie-tts-server/genie_data/
+
+# Large binary assets (loaded from CDN in production)
+public/model.vrm
+public/*.vrma
+public/*.mp3
