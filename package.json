@@ -9,8 +9,9 @@
     "start": "node server.cjs",
     "dev": "vite",
     "build": "node -e \"try{require('fs').rmSync('dist',{recursive:true,force:true})}catch(e){}\" && vite build",
-    "preview": "vite preview",
-    "lint": "eslint . --ext ts,tsx --report-unused-disable-directives --max-warnings 0"
+    "preview": "npm run build && wrangler dev",
+    "lint": "eslint . --ext ts,tsx --report-unused-disable-directives --max-warnings 0",
+    "deploy": "npm run build && wrangler deploy"
   },
   "dependencies": {
     "@pixiv/three-vrm": "^3.4.4",
@@ -24,6 +25,7 @@
     "zustand": "^4.4.7"
   },
   "devDependencies": {
+    "@cloudflare/vite-plugin": "^1.35.0",
     "@types/react": "^18.2.43",
     "@types/react-dom": "^18.2.17",
     "@types/three": "^0.182.0",
@@ -34,6 +36,7 @@
     "eslint-plugin-react-hooks": "^4.6.0",
     "eslint-plugin-react-refresh": "^0.4.5",
     "typescript": "^5.2.2",
-    "vite": "^6.4.2"
+    "vite": "^6.4.2",
+    "wrangler": "^4.87.0"
   }
 }
