@@ -1,0 +1,14 @@
+/* InteractionPage - 全屏布局 */
+.interaction-page {
+  width: 100vw;
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  background: #1a1a2e;
+}
+
+/* 隐藏原有头部，使用 ChatWindow 内置的工具栏 */
+.interaction-header {
+  display: none;
+}

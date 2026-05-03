@@ -1,0 +1,47 @@
+{
+  "name": "virtual-human-counseling-game",
+  "version": "2.0.0",
+  "description": "虚拟数字人心理咨询师游戏 - 与温和、耐心、热情的小暖进行对话",
+  "private": true,
+  "type": "module",
+  "main": "dist-electron/main/index.js",
+  "scripts": {
+    "dev": "vite",
+    "dev:electron": "electron-vite dev",
+    "build": "tsc && vite build",
+    "build:electron": "electron-vite build",
+    "build:installer": "electron-builder",
+    "preview": "vite preview",
+    "lint": "eslint . --ext ts,tsx --report-unused-disable-directives --max-warnings 0",
+    "postinstall": "electron-builder install-app-deps"
+  },
+  "dependencies": {
+    "@pixiv/three-vrm": "^3.4.4",
+    "@pixiv/three-vrm-animation": "^3.5.2",
+    "axios": "^1.6.2",
+    "electron-store": "^11.0.2",
+    "electron-updater": "^6.1.7",
+    "framer-motion": "^10.16.16",
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0",
+    "three": "^0.182.0",
+    "zustand": "^4.4.7"
+  },
+  "devDependencies": {
+    "@types/electron": "^1.4.38",
+    "@types/react": "^18.2.43",
+    "@types/react-dom": "^18.2.17",
+    "@types/three": "^0.182.0",
+    "@typescript-eslint/eslint-plugin": "^6.14.0",
+    "@typescript-eslint/parser": "^6.14.0",
+    "@vitejs/plugin-react": "^4.2.1",
+    "electron": "^28.0.0",
+    "electron-builder": "^24.9.1",
+    "electron-vite": "^1.0.29",
+    "eslint": "^8.55.0",
+    "eslint-plugin-react-hooks": "^4.6.0",
+    "eslint-plugin-react-refresh": "^0.4.5",
+    "typescript": "^5.2.2",
+    "vite": "^4.5.0"
+  }
+}

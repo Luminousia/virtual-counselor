@@ -1,0 +1,21 @@
+<svg width="256" height="256" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="bgGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#ff7043;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#ffab91;stop-opacity:1" />
+    </linearGradient>
+  </defs>
+  
+  <!-- 背景圆形 -->
+  <circle cx="128" cy="128" r="120" fill="url(#bgGradient)"/>
+  
+  <!-- 微笑表情 -->
+  <circle cx="90" cy="100" r="12" fill="white"/>
+  <circle cx="166" cy="100" r="12" fill="white"/>
+  
+  <!-- 嘴巴 -->
+  <path d="M 70 140 Q 128 180 186 140" stroke="white" stroke-width="8" fill="none" stroke-linecap="round"/>
+  
+  <!-- 爱心装饰 -->
+  <path d="M 128 50 C 128 50 100 30 80 50 C 60 70 80 90 128 110 C 176 90 196 70 176 50 C 156 30 128 50 128 50" fill="white" opacity="0.8"/>
+</svg>

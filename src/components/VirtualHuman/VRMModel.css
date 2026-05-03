@@ -1,0 +1,122 @@
+/**
+ * VRM模型组件样式
+ */
+
+.vrm-container {
+  width: 100%;
+  height: 100%;
+  position: relative;
+  overflow: hidden;
+}
+
+.vrm-loading {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+  min-height: 400px;
+  background: linear-gradient(135deg, #fef9f3 0%, #fff5f8 100%);
+}
+
+.vrm-loading-spinner {
+  width: 48px;
+  height: 48px;
+  border: 3px solid #f8d7e8;
+  border-top-color: #e88bb5;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.vrm-loading-text {
+  margin-top: 16px;
+  font-size: 14px;
+  color: #666;
+}
+
+.vrm-loading-progress {
+  width: 200px;
+  height: 4px;
+  margin-top: 12px;
+  background: #f0f0f0;
+  border-radius: 2px;
+  overflow: hidden;
+}
+
+.vrm-loading-progress-bar {
+  height: 100%;
+  background: linear-gradient(90deg, #e88bb5, #d4729c);
+  border-radius: 2px;
+  transition: width 0.3s ease;
+}
+
+.vrm-error {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+  min-height: 400px;
+  background: linear-gradient(135deg, #fef9f3 0%, #fff5f8 100%);
+  padding: 24px;
+}
+
+.vrm-error-icon {
+  font-size: 48px;
+  margin-bottom: 16px;
+}
+
+.vrm-error-text {
+  font-size: 14px;
+  color: #e74c3c;
+  text-align: center;
+  margin-bottom: 16px;
+}
+
+.vrm-error-retry {
+  padding: 8px 24px;
+  background: linear-gradient(135deg, #e88bb5, #d4729c);
+  color: white;
+  border: none;
+  border-radius: 20px;
+  font-size: 14px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.vrm-error-retry:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(232, 139, 165, 0.4);
+}
+
+/* 响应式调整 */
+@media (max-width: 768px) {
+  .vrm-loading-spinner {
+    width: 36px;
+    height: 36px;
+  }
+
+  .vrm-loading-text {
+    font-size: 13px;
+  }
+
+  .vrm-loading-progress {
+    width: 160px;
+  }
+
+  .vrm-error-icon {
+    font-size: 36px;
+  }
+
+  .vrm-error-text {
+    font-size: 13px;
+  }
+}

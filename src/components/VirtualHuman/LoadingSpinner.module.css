@@ -1,0 +1,156 @@
+/* 加载动画组件样式 */
+
+.container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 40px;
+  min-height: 300px;
+}
+
+.spinnerWrapper {
+  position: relative;
+  width: 100px;
+  height: 100px;
+  margin-bottom: 30px;
+}
+
+.mainSpinner {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+}
+
+.innerCircle {
+  width: 50px;
+  height: 50px;
+  border: 3px solid transparent;
+  border-top-color: var(--warm-coral, #ff9a76);
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+.outerCircle {
+  position: absolute;
+  top: -10px;
+  left: -10px;
+  width: 70px;
+  height: 70px;
+  border: 3px solid transparent;
+  border-bottom-color: var(--warm-orange, #ff7043);
+  border-radius: 50%;
+  animation: spin 1.5s linear infinite reverse;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.petals {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+}
+
+.petal {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 12px;
+  height: 12px;
+  background: linear-gradient(135deg, var(--warm-rose, #ffb4a2), var(--warm-coral, #ff9a76));
+  border-radius: 50% 0 50% 50%;
+  transform-origin: center;
+  animation: petalFloat 2s ease-in-out infinite;
+}
+
+@keyframes petalFloat {
+  0%, 100% {
+    opacity: 0.6;
+    transform: rotate(var(--rotation)) translateY(-20px) scale(0.8);
+  }
+  50% {
+    opacity: 1;
+    transform: rotate(var(--rotation)) translateY(-30px) scale(1);
+  }
+}
+
+.progressSection {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.progressBar {
+  width: 200px;
+  height: 6px;
+  background: rgba(93, 64, 55, 0.1);
+  border-radius: 3px;
+  overflow: hidden;
+}
+
+.progressFill {
+  height: 100%;
+  background: linear-gradient(90deg, 
+    var(--warm-coral, #ff9a76), 
+    var(--warm-orange, #ff7043)
+  );
+  border-radius: 3px;
+  transition: width 0.3s ease;
+}
+
+.progressText {
+  font-size: 14px;
+  color: var(--warm-text-light, #8d6e63);
+  min-width: 40px;
+}
+
+.message {
+  font-size: 16px;
+  color: var(--warm-text, #5d4037);
+  margin-bottom: 20px;
+}
+
+.tips {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 20px;
+  background: rgba(255, 255, 255, 0.8);
+  backdrop-filter: blur(10px);
+  border-radius: 20px;
+  box-shadow: 0 4px 12px rgba(93, 64, 55, 0.08);
+}
+
+.tipIcon {
+  font-size: 18px;
+}
+
+.tipText {
+  font-size: 13px;
+  color: var(--warm-text-light, #8d6e63);
+}
+
+/* 响应式 */
+@media (max-width: 768px) {
+  .progressBar {
+    width: 150px;
+  }
+  
+  .petals {
+    transform: scale(0.8);
+  }
+  
+  .tips {
+    flex-direction: column;
+    gap: 4px;
+    text-align: center;
+  }
+}

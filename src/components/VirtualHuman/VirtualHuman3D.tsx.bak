@@ -1,0 +1,478 @@
+/**
+ * 虚拟数字人3D展示组件
+ * 基于React Three Fiber构建，支持高性能渲染和丰富交互
+ */
+
+import React, { useRef, useEffect, useState, useCallback, Suspense, lazy } from 'react';
+import { Canvas, useFrame, useThree, ThreeEvent } from '@react-three/fiber';
+import { VRM, VRMLoader, VRMUtils, VRMSchema } from '@pixiv/three-vrm';
+import { EffectComposer, Bloom, Vignette, Noise } from '@react-three/postprocessing';
+import { Environment, OrbitControls, Html, useProgress, ContactShadows, Float, Stars } from '@react-three/drei';
+import * as THREE from 'three';
+import { useSpring, animated, config } from '@react-spring/web';
+import styles from './VirtualHuman3D.module.css';
+
+// 懒加载组件
+const LoadingSpinner = lazy(() => import('./LoadingSpinner'));
+const EmotionIndicator = lazy(() => import('./EmotionIndicator'));
+const StatusIndicator = lazy(() => import('./StatusIndicator'));
+
+// 类型定义
+interface LipSyncResult {
+  mouthA: number;
+  mouthE: number;
+  mouthI: number;
+  mouthO: number;
+  mouthU: number;
+}
+
+type EmotionType = 'happy' | 'sad' | 'angry' | 'surprised' | 'fearful' | 'disgusted' | 'neutral';
+type TextType = 'question' | 'emphasis' | 'greeting' | 'agreement' | 'normal';
+
+interface VirtualHuman3DProps {
+  modelUrl?: string;
+  isSpeaking?: boolean;
+  volume?: number;
+  lipSyncData?: LipSyncResult | null;
+  emotion?: EmotionType;
+  textType?: TextType;
+  onModelLoad?: (vrm: VRM) => void;
+  onError?: (error: Error) => void;
+}
+
+// VRM角色组件
+const VRMCharacter: React.FC<{
+  url: string;
+  isSpeaking: boolean;
+  volume: number;
+  lipSyncData: LipSyncResult | null;
+  emotion: EmotionType;
+  textType: TextType;
+  onLoad: (vrm: VRM) => void;
+}> = ({ 
+  url, 
+  isSpeaking, 
+  volume, 
+  lipSyncData, 
+  emotion, 
+  textType,
+  onLoad 
+}) => {
+  const groupRef = useRef<THREE.Group>(null);
+  const vrmRef = useRef<VRM | null>(null);
+  const blinkTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const lastBlinkTimeRef = useRef<number>(0);
+  
+  // 口型同步的平滑过渡值
+  const lipValuesRef = useRef({
+    mouthA: 0, mouthE: 0, mouthI: 0, mouthO: 0, mouthU: 0
+  });
+  
+  // 动画状态
+  const [isBlinking, setIsBlinking] = useState(false);
+  const [blinkValue, setBlinkValue] = useState(0);
+  
+  // 加载VRM模型
+  useEffect(() => {
+    if (!url) return;
+    
+    const loader = new VRMLoader();
+    
+    loader.load(
+      url,
+      (vrm) => {
+        console.log('VRM模型加载成功:', url);
+        
+        // 优化渲染设置
+        VRMUtils.removeShadow(vrm);
+        
+        vrm.scene.traverse((object) => {
+          if (object instanceof THREE.Mesh) {
+            object.frustumCulled = false;
+            object.castShadow = true;
+            object.receiveShadow = true;
+            
+            // 优化材质
+            if (object.material) {
+              object.material.envMapIntensity = 0.5;
+              object.material.roughness = 0.7;
+              object.material.metalness = 0.1;
+            }
+          }
+        });
+        
+        // 初始化眨眼控制器
+        if (vrm.blinkController) {
+          vrm.blinkController.enable = true;
+          vrm.blinkController.maxInterval = 4000;
+          vrm.blinkController.minInterval = 2000;
+        }
+        
+        // 初始化表情
+        if (vrm.expressionProxy) {
+          // 默认设置
+          vrm.expressionProxy.setValue('happy', 0);
+          vrm.expressionProxy.setValue('angry', 0);
+          vrm.expressionProxy.setValue('sad', 0);
+          vrm.expressionProxy.setValue('surprised', 0);
+          vrm.expressionProxy.setValue('neutral', 1);
+        }
+        
+        vrmRef.current = vrm;
+        onLoad(vrm);
+      },
+      (progress) => {
+        const percent = (progress.loaded / progress.total * 100).toFixed(0);
+        console.log(`VRM加载进度: ${percent}%`);
+      },
+      (error) => {
+        console.error('VRM模型加载失败:', error);
+      }
+    );
+    
+    return () => {
+      if (vrmRef.current) {
+        vrmRef.current.dispose();
+        vrmRef.current = null;
+      }
+      if (blinkTimerRef.current) {
+        clearTimeout(blinkTimerRef.current);
+      }
+    };
+  }, [url, onLoad]);
+  
+  // 渲染循环
+  useFrame((state, delta) => {
+    if (!vrmRef.current) return;
+    
+    const vrm = vrmRef.current;
+    const time = state.clock.elapsedTime;
+    
+    // 1. 口型同步处理
+    if (lipSyncData && vrm.blendShapeProxy) {
+      const target = lipSyncData;
+      const current = lipValuesRef.current;
+      
+      // 平滑插值
+      const lerp = (start: number, end: number, factor: number) => 
+        start + (end - start) * Math.min(factor, 1);
+      
+      current.mouthA = lerp(current.mouthA, target.mouthA, 0.3);
+      current.mouthE = lerp(current.mouthE, target.mouthE, 0.3);
+      current.mouthI = lerp(current.mouthI, target.mouthI, 0.3);
+      current.mouthO = lerp(current.mouthO, target.mouthO, 0.3);
+      current.mouthU = lerp(current.mouthU, target.mouthU, 0.3);
+      
+      // 应用到VRM
+      vrm.blendShapeProxy.setValue(VRMSchema.BlendShapePresetName.A, current.mouthA);
+      vrm.blendShapeProxy.setValue(VRMSchema.BlendShapePresetName.E, current.mouthE);
+      vrm.blendShapeProxy.setValue(VRMSchema.BlendShapePresetName.I, current.mouthI);
+      vrm.blendShapeProxy.setValue(VRMSchema.BlendShapePresetName.O, current.mouthO);
+      vrm.blendShapeProxy.setValue(VRMSchema.BlendShapePresetName.U, current.mouthU);
+      vrm.blendShapeProxy.update();
+    }
+    
+    // 2. 自动眨眼
+    if (vrm.blinkController && time - lastBlinkTimeRef.current > 2500) {
+      if (Math.random() < 0.3) { // 30%概率眨眼
+        setIsBlinking(true);
+        setBlinkValue(1);
+        
+        setTimeout(() => {
+          setIsBlinking(false);
+          setBlinkValue(0);
+        }, 150);
+        
+        lastBlinkTimeRef.current = time;
+      }
+    }
+    
+    // 3. 情感表情控制
+    if (vrm.expressionProxy) {
+      const emotionWeights: Record<EmotionType, number> = {
+        happy: emotion === 'happy' ? 1 : 0,
+        sad: emotion === 'sad' ? 1 : 0,
+        angry: emotion === 'angry' ? 1 : 0,
+        surprised: emotion === 'surprised' ? 1 : 0,
+        fearful: emotion === 'fearful' ? 1 : 0,
+        disgusted: emotion === 'disgusted' ? 1 : 0,
+        neutral: emotion === 'neutral' ? 1 : 0
+      };
+      
+      // 平滑过渡到目标表情
+      Object.entries(emotionWeights).forEach(([name, weight]) => {
+        const current = vrm.expressionProxy?.getValue(name as any) || 0;
+        const target = weight;
+        const newWeight = current + (target - current) * 0.05;
+        vrm.expressionProxy?.setValue(name as any, newWeight);
+      });
+      
+      vrm.expressionProxy.update();
+    }
+    
+    // 4. 说话时的轻微动作
+    if (isSpeaking && groupRef.current) {
+      const breathOffset = Math.sin(time * 2) * 0.01;
+      const headBob = Math.sin(time * 3) * 0.005;
+      
+      groupRef.current.position.y = breathOffset + headBob;
+    }
+    
+    // 5. 视线追踪（看向相机）
+    if (vrm.lookAtAnimator) {
+      vrm.lookAtAnimator.update(time);
+    }
+  });
+  
+  // 根据文本类型添加动作
+  useEffect(() => {
+    if (!groupRef.current || !vrmRef.current) return;
+    
+    // 根据textType调整动画状态
+    switch (textType) {
+      case 'question':
+        // 疑问：稍微歪头
+        groupRef.current.rotation.z = 0.1;
+        break;
+      case 'emphasis':
+        // 强调：身体微微前倾
+        groupRef.current.position.z = 0.1;
+        break;
+      case 'greeting':
+        // 问候：挥手
+        break;
+      case 'agreement':
+        // 同意：点头
+        break;
+      default:
+        // 正常：复位
+        groupRef.current.rotation.z = 0;
+        groupRef.current.position.z = 0;
+    }
+  }, [textType]);
+  
+  return (
+    <animated.group 
+      ref={groupRef}
+      position={[0, -1.0, 0]}
+      scale={1.2}
+    >
+      {vrmRef.current && (
+        <primitive object={vrmRef.current.scene} />
+      )}
+    </animated.group>
+  );
+};
+
+// 主组件
+const VirtualHuman3D: React.FC<VirtualHuman3DProps> = ({
+  modelUrl = '/VRM/default.vrm',
+  isSpeaking = false,
+  volume = 0,
+  lipSyncData = null,
+  emotion = 'neutral',
+  textType = 'normal',
+  onModelLoad,
+  onError
+}) => {
+  const [currentModel, setCurrentModel] = useState(modelUrl);
+  const [showEffects, setShowEffects] = useState(true);
+  const [autoRotate, setAutoRotate] = useState(false);
+  const [loadedVRM, setLoadedVRM] = useState<VRM | null>(null);
+  
+  // 加载状态
+  const [isLoading, setIsLoading] = useState(true);
+  const [loadProgress, setLoadProgress] = useState(0);
+  
+  // 窗口尺寸响应
+  const [viewport, setViewport] = useState({ width: 800, height: 600 });
+  
+  // 监听模型加载进度
+  useEffect(() => {
+    // 这里可以添加进度监听逻辑
+    console.log('开始加载模型:', currentModel);
+    setIsLoading(true);
+    setLoadProgress(0);
+  }, [currentModel]);
+  
+  // 模型加载完成回调
+  const handleModelLoad = useCallback((vrm: VRM) => {
+    setLoadedVRM(vrm);
+    setIsLoading(false);
+    setLoadProgress(100);
+    onModelLoad?.(vrm);
+    console.log('模型加载完成');
+  }, [onModelLoad]);
+  
+  // 错误处理
+  useEffect(() => {
+    if (loadedVRM === null && !isLoading) {
+      onError?.(new Error('模型加载失败'));
+    }
+  }, [loadedVRM, isLoading, onError]);
+  
+  return (
+    <div 
+      className={styles.container}
+      style={{ width: '100%', height: '100%' }}
+    >
+      <Canvas
+        camera={{
+          position: [0, 1.4, 2.5],
+          fov: 45,
+          near: 0.1,
+          far: 100
+        }}
+        gl={{
+          antialias: true,
+          toneMapping: THREE.ACESFilmicToneMapping,
+          toneMappingExposure: 1.2,
+          outputColorSpace: THREE.SRGBColorSpace,
+          powerPreference: 'high-performance'
+        }}
+        dpr={[1, 2]}
+        onCreated={({ gl, size }) => {
+          gl.setClearColor(0xfef9f3, 0);
+          setViewport({ width: size.width, height: size.height });
+        }}
+      >
+        {/* 环境设置 - 温暖的室内光照 */}
+        <ambientLight 
+          intensity={0.7} 
+          color="#fff5eb" 
+        />
+        <directionalLight 
+          position={[5, 10, 5]} 
+          intensity={1.0} 
+          castShadow 
+          color="#ffffff"
+        />
+        <pointLight 
+          position={[-3, 5, 3]} 
+          intensity={0.4} 
+          color="#ffccbc" 
+        />
+        
+        {/* 环境贴图 */}
+        <Environment preset="sunset" />
+        
+        {/* VRM角色 */}
+        <Suspense fallback={<LoadingSpinner progress={loadProgress} />}>
+          <VRMCharacter
+            url={currentModel}
+            isSpeaking={isSpeaking}
+            volume={volume}
+            lipSyncData={lipSyncData}
+            emotion={emotion}
+            textType={textType}
+            onLoad={handleModelLoad}
+          />
+        </Suspense>
+        
+        {/* 地面阴影 */}
+        <ContactShadows
+          position={[0, -1.0, 0]}
+          opacity={0.4}
+          scale={5}
+          blur={2.5}
+          far={10}
+          resolution={256}
+          color="#000000"
+        />
+        
+        {/* 后处理效果 */}
+        {showEffects && (
+          <EffectComposer>
+            <Bloom
+              luminanceThreshold={0.9}
+              luminanceSmoothing={0.9}
+              intensity={0.3}
+            />
+            <Vignette 
+              eskil={false} 
+              offset={0.1} 
+              darkness={0.35} 
+            />
+            <Noise 
+              opacity={0.02} 
+            />
+          </EffectComposer>
+        )}
+        
+        {/* 相机控制 */}
+        <OrbitControls
+          enablePan={false}
+          enableZoom={true}
+          minDistance={1.5}
+          maxDistance={4}
+          minPolarAngle={Math.PI / 4}
+          maxPolarAngle={Math.PI / 2}
+          target={[0, 1.3, 0]}
+          autoRotate={autoRotate}
+          autoRotateSpeed={0.5}
+        />
+      </Canvas>
+      
+      {/* 控制面板 */}
+      <div className={styles.controls}>
+        <button 
+          className={styles.controlButton}
+          onClick={() => setShowEffects(!showEffects)}
+          title={showEffects ? '关闭特效' : '开启特效'}
+        >
+          ✨
+        </button>
+        <button 
+          className={styles.controlButton}
+          onClick={() => setAutoRotate(!autoRotate)}
+          title={autoRotate ? '停止旋转' : '自动旋转'}
+        >
+          🔄
+        </button>
+        <button 
+          className={styles.controlButton}
+          onClick={() => {
+            // 重置视角
+          }}
+          title="重置视角"
+        >
+          🎯
+        </button>
+      </div>
+      
+      {/* 状态指示 */}
+      <Suspense fallback={null}>
+        <StatusIndicator 
+          isSpeaking={isSpeaking}
+          emotion={emotion}
+        />
+      </Suspense>
+      
+      {/* 情感指示 */}
+      <Suspense fallback={null}>
+        <EmotionIndicator emotion={emotion} />
+      </Suspense>
+      
+      {/* 加载状态 */}
+      {isLoading && (
+        <div className={styles.loadingOverlay}>
+          <div className={styles.loadingContent}>
+            <div className={styles.loadingSpinner} />
+            <p className={styles.loadingText}>正在加载小暖...</p>
+            <div className={styles.loadingProgress}>
+              <div 
+                className={styles.loadingProgressBar}
+                style={{ width: `${loadProgress}%` }}
+              />
+            </div>
+            <p className={styles.loadingPercent}>
+              {loadProgress.toFixed(0)}%
+            </p>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
+
+export default VirtualHuman3D;

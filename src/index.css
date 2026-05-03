@@ -1,0 +1,63 @@
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+:root {
+  /* 暖色调调色板 */
+  --warm-cream: #fef9f3;
+  --warm-peach: #fff5eb;
+  --warm-coral: #ff9a76;
+  --warm-orange: #ff7043;
+  --warm-rose: #ffb4a2;
+  --warm-gold: #ffc857;
+  --warm-brown: #8b6f47;
+  --warm-dark: #4a3728;
+  --warm-text: #5d4037;
+  --warm-text-light: #8d6e63;
+  --warm-border: #f5e6d3;
+  --warm-shadow: rgba(139, 111, 71, 0.1);
+}
+
+body {
+  margin: 0;
+  font-family: 'Noto Sans SC', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto',
+    'Oxygen', 'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
+    sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  background: linear-gradient(135deg, var(--warm-cream) 0%, var(--warm-peach) 100%);
+  color: var(--warm-text);
+  min-height: 100vh;
+}
+
+code {
+  font-family: source-code-pro, Menlo, Monaco, Consolas, 'Courier New',
+    monospace;
+}
+
+#root {
+  width: 100%;
+  min-height: 100vh;
+  height: 100%;
+}
+
+/* 全局滚动条样式 */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--warm-cream);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--warm-rose);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--warm-coral);
+}

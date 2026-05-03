@@ -1,0 +1,343 @@
+/* MessageBubble 模块样式 */
+
+/* ========== 气泡容器 ========== */
+.bubbleContainer {
+  display: flex;
+  align-items: flex-end;
+  gap: 8px;
+  max-width: 100%;
+  position: relative;
+}
+
+.ownBubble {
+  flex-direction: row-reverse;
+}
+
+.otherBubble {
+  flex-direction: row;
+}
+
+/* ========== 消息气泡 ========== */
+.bubble {
+  padding: 12px 16px;
+  border-radius: 20px;
+  color: #ffffff;
+  font-size: 14px;
+  line-height: 1.6;
+  position: relative;
+  word-break: break-word;
+  transition: all 0.3s ease;
+}
+
+.ownBubble .bubble {
+  border-bottom-right-radius: 4px;
+}
+
+.otherBubble .bubble {
+  border-bottom-left-radius: 4px;
+}
+
+/* 气泡悬停效果 */
+.bubble:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 6px 20px var(--shadow-color, rgba(102, 126, 234, 0.4));
+}
+
+/* ========== 气泡内容 ========== */
+.content {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+/* 展开提示 */
+.expandHint {
+  color: rgba(255, 255, 255, 0.7);
+  font-size: 12px;
+  cursor: pointer;
+  margin-left: 4px;
+}
+
+.expandHint:hover {
+  color: #ffffff;
+  text-decoration: underline;
+}
+
+/* ========== 情感图标 ========== */
+.emotionIcon {
+  font-size: 20px;
+  animation: emotionBounce 0.5s ease-out;
+}
+
+@keyframes emotionBounce {
+  0% {
+    transform: scale(0) rotate(-20deg);
+    opacity: 0;
+  }
+  50% {
+    transform: scale(1.2) rotate(10deg);
+  }
+  100% {
+    transform: scale(1) rotate(0deg);
+    opacity: 1;
+  }
+}
+
+/* ========== 时间戳 ========== */
+.timestamp {
+  font-size: 11px;
+  color: rgba(255, 255, 255, 0.5);
+  white-space: nowrap;
+}
+
+.ownBubble .timestamp {
+  text-align: right;
+}
+
+.otherBubble .timestamp {
+  text-align: left;
+}
+
+/* ========== 状态图标 ========== */
+.statusIcon {
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.6);
+}
+
+.sending {
+  animation: dotsPulse 1s ease-in-out infinite;
+}
+
+@keyframes dotsPulse {
+  0%, 100% {
+    opacity: 0.4;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+
+.sent {
+  color: rgba(255, 255, 255, 0.8);
+}
+
+/* ========== 打字指示器 ========== */
+.typingIndicator {
+  display: flex;
+  gap: 4px;
+  padding: 4px 0;
+}
+
+.typingIndicator span {
+  width: 8px;
+  height: 8px;
+  background: rgba(255, 255, 255, 0.6);
+  border-radius: 50%;
+  display: inline-block;
+}
+
+.typingIndicator span:nth-child(1) {
+  animation: typingBounce 1.4s infinite ease-in-out;
+  animation-delay: -0.32s;
+}
+
+.typingIndicator span:nth-child(2) {
+  animation: typingBounce 1.4s infinite ease-in-out;
+  animation-delay: -0.16s;
+}
+
+.typingIndicator span:nth-child(3) {
+  animation: typingBounce 1.4s infinite ease-in-out;
+  animation-delay: 0;
+}
+
+@keyframes typingBounce {
+  0%, 80%, 100% {
+    transform: translateY(0);
+    opacity: 0.4;
+  }
+  40% {
+    transform: translateY(-6px);
+    opacity: 1;
+  }
+}
+
+/* ========== 消息动画 ========== */
+@keyframes messageSlideIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px) scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.bubbleContainer {
+  animation: messageSlideIn 0.3s ease-out;
+}
+
+/* ========== 消息类型样式 ========== */
+
+/* 用户消息 - 自己的消息 */
+.ownBubble .bubble {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);
+}
+
+/* 助手消息 - 不同情感样式 */
+.otherBubble .bubble[data-emotion="happy"] {
+  background: linear-gradient(135deg, #81c784 0%, #66bb6a 100%);
+  box-shadow: 0 4px 15px rgba(76, 175, 80, 0.3);
+}
+
+.otherBubble .bubble[data-emotion="sad"] {
+  background: linear-gradient(135deg, #64b5f6 0%, #42a5f5 100%);
+  box-shadow: 0 4px 15px rgba(33, 150, 243, 0.3);
+}
+
+.otherBubble .bubble[data-emotion="angry"] {
+  background: linear-gradient(135deg, #ef5350 0%, #e53935 100%);
+  box-shadow: 0 4px 15px rgba(244, 67, 54, 0.3);
+}
+
+.otherBubble .bubble[data-emotion="surprised"] {
+  background: linear-gradient(135deg, #ffb74d 0%, #ffa726 100%);
+  box-shadow: 0 4px 15px rgba(255, 152, 0, 0.3);
+}
+
+.otherBubble .bubble[data-emotion="fearful"] {
+  background: linear-gradient(135deg, #7e57c2 0%, #5e35b1 100%);
+  box-shadow: 0 4px 15px rgba(103, 58, 183, 0.3);
+}
+
+.otherBubble .bubble[data-emotion="disgusted"] {
+  background: linear-gradient(135deg, #4db6ac 0%, #26a69a 100%);
+  box-shadow: 0 4px 15px rgba(0, 150, 136, 0.3);
+}
+
+.otherBubble .bubble[data-emotion="neutral"] {
+  background: linear-gradient(135deg, #78909c 0%, #546e7a 100%);
+  box-shadow: 0 4px 15px rgba(96, 125, 139, 0.3);
+}
+
+.otherBubble .bubble[data-emotion="thinking"] {
+  background: linear-gradient(135deg, #90a4ae 0%, #78909c 100%);
+  box-shadow: 0 4px 15px rgba(141, 110, 99, 0.3);
+}
+
+/* ========== 响应式设计 ========== */
+@media (max-width: 768px) {
+  .bubble {
+    padding: 10px 14px;
+    font-size: 13px;
+    max-width: 85%;
+  }
+
+  .timestamp {
+    font-size: 10px;
+  }
+
+  .emotionIcon {
+    font-size: 18px;
+  }
+}
+
+@media (max-width: 480px) {
+  .bubble {
+    padding: 8px 12px;
+    font-size: 12px;
+    max-width: 90%;
+  }
+}
+
+/* ========== 特殊效果 ========== */
+
+/* 消息连接效果 - 连续消息 */
+.bubbleContainer:not(:last-child) .bubble {
+  border-bottom-right-radius: 4px;
+}
+
+.ownBubble:not(:last-child) .bubble {
+  border-bottom-right-radius: 4px;
+}
+
+.otherBubble:not(:last-child) .bubble {
+  border-bottom-left-radius: 4px;
+}
+
+/* 第一条消息 */
+.bubbleContainer:first-child .bubble {
+  border-radius: 20px;
+}
+
+.ownBubble:first-child .bubble {
+  border-top-right-radius: 4px;
+}
+
+.otherBubble:first-child .bubble {
+  border-top-left-radius: 4px;
+}
+
+/* 最后一条消息 */
+.bubbleContainer:last-child .bubble {
+  border-radius: 20px;
+}
+
+.ownBubble:last-child .bubble {
+  border-bottom-right-radius: 20px;
+  border-top-right-radius: 4px;
+}
+
+.otherBubble:last-child .bubble {
+  border-bottom-left-radius: 20px;
+  border-top-left-radius: 4px;
+}
+
+/* ========== 动画效果 ========== */
+
+/* 消息进入动画 */
+@keyframes slideInRight {
+  from {
+    opacity: 0;
+    transform: translateX(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes slideInLeft {
+  from {
+    opacity: 0;
+    transform: translateX(-20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+.ownBubble {
+  animation: slideInRight 0.3s ease-out;
+}
+
+.otherBubble {
+  animation: slideInLeft 0.3s ease-out;
+}
+
+/* 气泡脉冲动画 */
+@keyframes bubblePulse {
+  0%, 100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.02);
+  }
+}
+
+.bubble:hover {
+  animation: bubblePulse 0.3s ease-in-out;
+}

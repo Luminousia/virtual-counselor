@@ -1,0 +1,18 @@
+.virtual-human-container {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  min-height: 400px;
+  height: 100%;
+  width: 100%;
+  position: relative;
+  box-sizing: border-box;
+  background: linear-gradient(180deg, #fffbf7 0%, #fff5eb 100%);
+  border-radius: 0;
+}
+
+/* 透明模式 - 用于显示场景背景 */
+.virtual-human-container.transparent {
+  background: transparent;
+}

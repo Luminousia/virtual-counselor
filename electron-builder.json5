@@ -1,0 +1,193 @@
+{
+  "$schema": "https://json.schemastore.org/electron-builder",
+  "appId": "com.virtualhuman.counselor",
+  "productName": "虚拟心理咨询师",
+  "description": "与虚拟数字人小暖进行心理咨询对话",
+  
+  "directories": {
+    "output": "release",
+    "buildResources": "resources",
+    "app": "."
+  },
+  
+  "files": [
+    {
+      "from": ".",
+      "filter": [
+        "package.json",
+        "package-lock.json",
+        "dist/**/*",
+        "!dist/**/*.map",
+        "VRM/**/*",
+        "resources/**/*",
+        "!node_modules"
+      ]
+    },
+    {
+      "from": "electron",
+      "to": "electron"
+    }
+  ],
+  
+  "asar": {
+    "smartUnpack": true,
+    "extraResources": [
+      {
+        "from": "VRM",
+        "to": "VRM"
+      },
+      {
+        "from": "resources",
+        "to": "resources"
+      }
+    ]
+  },
+  
+  "win": {
+    "target": [
+      {
+        "target": "nsis",
+        "arch": ["x64", "ia32"]
+      },
+      {
+        "target": "zip",
+        "arch": ["x64", "ia32"]
+      }
+    ],
+    "icon": "resources/icons/icon.ico",
+    "artifactName": "virtual-counselor-${version}.${ext}",
+    "requested-execution-level": "asInvoker",
+    "嘇un": {
+      "artifactName": "virtual-counselor-${version}.${ext}"
+    }
+  },
+  
+  "mac": {
+    "target": [
+      {
+        "target": "dmg",
+        "arch": ["x64", "arm64"]
+      },
+      {
+        "target": "zip",
+        "arch": ["x64", "arm64"]
+      }
+    ],
+    "icon": "resources/icons/icon.icns",
+    "artifactName": "virtual-counselor-${version}.${ext}",
+    "darkModeSupport": true,
+    "extendInfo": {
+      "CFBundleName": "虚拟心理咨询师",
+      "CFBundleDisplayName": "虚拟心理咨询师",
+      "CFBundleIdentifier": "com.virtualhuman.counselor",
+      "CFBundleVersion": "1.0.0",
+      "CFBundleShortVersionString": "1.0.0",
+      "CFBundlePackageType": "APPL",
+      "CFBundleExecutable": "虚拟心理咨询师",
+      "NSHumanReadableCopyright": "Copyright 2026. All rights reserved.",
+      "NSPrincipalClass": "NSApplication"
+    }
+  },
+  
+  "linux": {
+    "target": [
+      {
+        "target": "AppImage",
+        "arch": ["x64"]
+      },
+      {
+        "target": "snap",
+        "arch": ["x64"]
+      }
+    ],
+    "icon": "resources/icons/icon.png",
+    "artifactName": "virtual-counselor-${version}.${ext}",
+    "category": "Education;Entertainment",
+    "desktop": {
+      "Name": "虚拟心理咨询师",
+      "Comment": "与虚拟数字人小暖进行心理咨询对话",
+      "Keywords": "心理咨询;虚拟人;AI对话",
+      "Exec": "virtual-counselor",
+      "Icon": "virtual-counselor",
+      "Type": "Application",
+      "Terminal": false
+    }
+  },
+  
+  "nsis": {
+    "oneClick": false,
+    "allowToChangeInstallationDirectory": true,
+    "installerIcon": "resources/icons/install.ico",
+    "uninstallerIcon": "resources/icons/uninstall.ico",
+    "installerHeader": "resources/images/nsis-header.bmp",
+    "installerHeaderIcon": "resources/icons/install.ico",
+    "uninstallDisplayName": "卸载虚拟心理咨询师",
+    "license": "resources/LICENSE.txt",
+    "runAfterFinish": true,
+    "deleteAppDataOnUninstall": true,
+    "createDesktopShortcut": true,
+    "createStartMenuShortcut": true,
+    "shortcutName": "虚拟心理咨询师"
+  },
+  
+  "dmg": {
+    "icon": "resources/icons/dmg.icns",
+    "iconSize": 80,
+    "background": "resources/images/dmg-background.png",
+    "window": {
+      "x": 100,
+      "y": 100,
+      "width": 500,
+      "height": 400
+    },
+    "contents": [
+      {
+        "x": 200,
+        "y": 200,
+        "type": "file",
+        "path": "release/虚拟心理咨询师.app"
+      },
+      {
+        "x": 400,
+        "y": 200,
+        "type": "link",
+        "path": "/Applications"
+      }
+    ]
+  },
+  
+  "appImage": {
+    "arch": ["x64"],
+    "category": "Education;Entertainment",
+    "license": "resources/LICENSE.txt",
+    "fallbackIcon": "resources/icons/icon.png",
+    "maintainer": "Virtual Human Team <support@example.com>"
+  },
+  
+  "snap": {
+    "confinement": "strict",
+    "grade": "stable",
+    " plugs": ["desktop", "desktop-legacy", "unity7", "opengl", "pulseaudio", "camera", "microphone"],
+    "hooks": {
+      "configure": "./snap/hooks/configure.py"
+    }
+  },
+  
+  "afterPack": "./scripts/after-pack.js",
+  
+  "publish": {
+    "provider": "generic",
+    "url": "https://updates.example.com",
+    "channel": "latest"
+  },
+  
+  "generatedResourcesDirectory": "resources",
+  
+  "buildDependenciesFromSource": false,
+  
+  "npmRebuild": true,
+  
+  "nodeGypRebuild": false,
+  
+  "buildToolsVersion": "latest"
+}

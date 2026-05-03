@@ -1,0 +1,256 @@
+/* 虚拟数字人3D组件样式 */
+
+/* 容器 */
+.container {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  min-height: 400px;
+  overflow: hidden;
+  border-radius: 20px;
+  background: linear-gradient(180deg, #fef9f3 0%, #fff5eb 100%);
+}
+
+/* 控制面板 */
+.controls {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  display: flex;
+  gap: 8px;
+  z-index: 100;
+}
+
+.controlButton {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  border: none;
+  background: rgba(255, 255, 255, 0.9);
+  backdrop-filter: blur(10px);
+  box-shadow: 0 4px 12px rgba(93, 64, 55, 0.15);
+  cursor: pointer;
+  font-size: 18px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+}
+
+.controlButton:hover {
+  transform: scale(1.1);
+  box-shadow: 0 6px 20px rgba(93, 64, 55, 0.2);
+}
+
+.controlButton:active {
+  transform: scale(0.95);
+}
+
+/* 加载遮罩 */
+.loadingOverlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: linear-gradient(180deg, #fef9f3 0%, #fff5eb 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+
+.loadingContent {
+  text-align: center;
+  padding: 40px;
+}
+
+.loadingSpinner {
+  width: 60px;
+  height: 60px;
+  border: 4px solid var(--warm-border, #f5e6d3);
+  border-top-color: var(--warm-coral, #ff9a76);
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+  margin: 0 auto 20px;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.loadingText {
+  color: var(--warm-text, #5d4037);
+  font-size: 16px;
+  margin-bottom: 16px;
+}
+
+.loadingProgress {
+  width: 200px;
+  height: 8px;
+  background: rgba(93, 64, 55, 0.1);
+  border-radius: 4px;
+  overflow: hidden;
+  margin: 0 auto 8px;
+}
+
+.loadingProgressBar {
+  height: 100%;
+  background: linear-gradient(90deg, var(--warm-coral, #ff9a76), var(--warm-orange, #ff7043));
+  border-radius: 4px;
+  transition: width 0.3s ease;
+}
+
+.loadingPercent {
+  color: var(--warm-text-light, #8d6e63);
+  font-size: 14px;
+}
+
+/* 状态指示器 */
+.statusIndicator {
+  position: absolute;
+  top: 16px;
+  left: 16px;
+  display: flex;
+  gap: 8px;
+  z-index: 100;
+}
+
+.speakingIndicator {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 16px;
+  background: rgba(255, 255, 255, 0.9);
+  backdrop-filter: blur(10px);
+  border-radius: 20px;
+  font-size: 14px;
+  color: var(--warm-text, #5d4037);
+  box-shadow: 0 4px 12px rgba(93, 64, 55, 0.1);
+}
+
+.pulse {
+  width: 8px;
+  height: 8px;
+  background: var(--warm-coral, #ff9a76);
+  border-radius: 50%;
+  animation: pulse 1.5s ease-in-out infinite;
+}
+
+@keyframes pulse {
+  0%, 100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.5;
+    transform: scale(1.2);
+  }
+}
+
+/* 情感指示 */
+.emotionIndicator {
+  position: absolute;
+  bottom: 16px;
+  left: 50%;
+  transform: translateX(-50%);
+  padding: 8px 16px;
+  background: rgba(255, 255, 255, 0.9);
+  backdrop-filter: blur(10px);
+  border-radius: 20px;
+  font-size: 14px;
+  box-shadow: 0 4px 12px rgba(93, 64, 55, 0.1);
+}
+
+.emotionIndicator.happy {
+  color: #81c784;
+}
+
+.emotionIndicator.sad {
+  color: #64b5f6;
+}
+
+.emotionIndicator.angry {
+  color: #e57373;
+}
+
+.emotionIndicator.surprised {
+  color: #ffb74d;
+}
+
+.emotionIndicator.neutral {
+  color: #8d6e63;
+}
+
+/* 响应式设计 */
+@media (max-width: 768px) {
+  .controls {
+    top: 8px;
+    right: 8px;
+  }
+  
+  .controlButton {
+    width: 36px;
+    height: 36px;
+    font-size: 16px;
+  }
+  
+  .statusIndicator {
+    top: 8px;
+    left: 8px;
+  }
+  
+  .speakingIndicator {
+    padding: 6px 12px;
+    font-size: 12px;
+  }
+  
+  .loadingContent {
+    padding: 24px;
+  }
+  
+  .loadingSpinner {
+    width: 48px;
+    height: 48px;
+  }
+  
+  .loadingProgress {
+    width: 150px;
+  }
+}
+
+/* 触摸设备优化 */
+@media (hover: none) {
+  .controlButton:hover {
+    transform: none;
+  }
+  
+  .controlButton:active {
+    transform: scale(0.95);
+    background: rgba(255, 255, 255, 1);
+  }
+}
+
+/* 暗色模式支持 */
+@media (prefers-color-scheme: dark) {
+  .container {
+    background: linear-gradient(180deg, #2d2d2d 0%, #3d3d3d 100%);
+  }
+  
+  .controlButton {
+    background: rgba(255, 255, 255, 0.15);
+    color: #fff;
+  }
+  
+  .speakingIndicator {
+    background: rgba(255, 255, 255, 0.15);
+    color: #fff;
+  }
+  
+  .emotionIndicator {
+    background: rgba(255, 255, 255, 0.15);
+    color: #fff;
+  }
+}
