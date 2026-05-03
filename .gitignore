@@ -55,3 +55,6 @@ genie-tts-server/genie_data/
 public/model.vrm
 public/*.vrma
 public/*.mp3
+
+# Wrangler deploy artifacts
+.wrangler/
