@@ -5,7 +5,11 @@ import { useCurrentModel } from '../../store/assetStore'
 import './VirtualHuman.css'
 
 // 默认VRM模型路径
-const DEFAULT_MODEL_URL = '/model.vrm';
+// 生产环境：从 jsDelivr CDN 加载（绕过 Cloudflare 25MB 单文件限制）
+// 开发环境：从本地 /model.vrm 加载
+const DEFAULT_MODEL_URL = import.meta.env.PROD
+  ? 'https://cdn.jsdelivr.net/gh/Luminousia/virtual-counselor@master/public/model.vrm'
+  : '/model.vrm';
 
 interface VirtualHumanProps {
   isSpeaking: boolean

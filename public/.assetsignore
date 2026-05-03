@@ -1,0 +1,5 @@
+# Cloudflare Workers 资产忽略文件
+# 超过 25MB 的大文件通过外部 CDN 提供，不上传到 Workers
+
+model.vrm
+*.vrma
