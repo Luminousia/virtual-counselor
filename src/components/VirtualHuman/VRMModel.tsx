@@ -302,22 +302,26 @@ const VRMModel: React.FC<VRMModelProps> = ({
 
     console.log('[VRMModel] 开始加载模型:', modelUrl);
 
-    // 用 async IIFE 处理 .gz 解压，因为 useEffect 回调本身不能是 async
+    // 用 async IIFE，因为 useEffect 回调本身不能是 async
     (async () => {
-      // 若为 .gz 压缩包，先在浏览器端解压再交给 GLTFLoader
+      // 若为分片模型（_p1.vrm），并行下载两个分片并合并
       let resolvedModelUrl = modelUrl;
-      if (modelUrl.endsWith('.gz') || modelUrl.endsWith('.bin')) {
+      if (modelUrl.endsWith('_p1.vrm')) {
         try {
-          console.log('[VRMModel] 检测到 .gz，正在下载并解压...');
-          const resp = await fetch(modelUrl);
-          console.log('[VRMModel] 响应状态:', resp.status, resp.headers.get('content-type'));
-          if (!resp.ok || !resp.body) throw new Error(`下载模型失败: HTTP ${resp.status}`);
-          const ct = resp.headers.get('content-type') || '';
-          if (ct.includes('text/html')) throw new Error(`模型文件未部署到CDN (返回了HTML, status=${resp.status})`);
-          const ds = new DecompressionStream('gzip');
-          const blob = await new Response(resp.body.pipeThrough(ds)).blob();
-          console.log('[VRMModel] 解压完成, blob size:', blob.size);
-          resolvedModelUrl = URL.createObjectURL(blob);
+          const p2Url = modelUrl.replace('_p1.vrm', '_p2.vrm');
+          console.log('[VRMModel] 检测到分片模型，并行下载两个分片...');
+          const [r1, r2] = await Promise.all([fetch(modelUrl), fetch(p2Url)]);
+          if (!r1.ok) throw new Error(`分片1下载失败: HTTP ${r1.status}`);
+          if (!r2.ok) throw new Error(`分片2下载失败: HTTP ${r2.status}`);
+          const [ab1, ab2] = await Promise.all([r1.arrayBuffer(), r2.arrayBuffer()]);
+          console.log('[VRMModel] 分片下载完成, 合并中... p1:', ab1.byteLength, 'p2:', ab2.byteLength);
+          const merged = new Uint8Array(ab1.byteLength + ab2.byteLength);
+          merged.set(new Uint8Array(ab1), 0);
+          merged.set(new Uint8Array(ab2), ab1.byteLength);
+          resolvedModelUrl = URL.createObjectURL(
+            new Blob([merged], { type: 'application/octet-stream' })
+          );
+          console.log('[VRMModel] 模型合并完成, 总大小:', merged.byteLength);
         } catch (e) {
           const err = e instanceof Error ? e : new Error(String(e));
           console.error('[VRMModel] 模型预处理失败:', err);

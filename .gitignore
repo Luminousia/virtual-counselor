@@ -51,10 +51,13 @@ genie-tts-server/CharacterModels/
 genie-tts-server/GenieData/
 genie-tts-server/genie_data/
 
-# Large binary assets (loaded from CDN in production)
+# Large binary assets
 public/model.vrm
+public/model.vrm.gz
+public/model.vrm.bin
 public/*.vrma
 public/*.mp3
+# 分片文件 model_p1.vrm / model_p2.vrm 需要提交，不在此排除
 
 # Wrangler deploy artifacts
 .wrangler/
