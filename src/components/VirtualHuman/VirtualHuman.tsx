@@ -6,9 +6,9 @@ import './VirtualHuman.css'
 
 // 默认VRM模型路径
 // 生产环境：从 jsDelivr CDN 加载（绕过 Cloudflare 25MB 单文件限制）
-// 生产环境：从 GitHub Release 加载 gz 压缩包，浏览器端解压（绕过 Cloudflare 25MB 限制）
+// 生产环境：从 GitHub Release 附件加载 gz 压缩包，浏览器端解压（绕过 Cloudflare 25MB 限制）
 const DEFAULT_MODEL_URL = import.meta.env.PROD
-  ? 'https://github.com/Luminousia/virtual-counselor/releases/download/v1.0.0/model.vrm.gz'
+  ? 'https://github.com/user-attachments/files/27318288/model.vrm.gz'
   : '/model.vrm';
 
 interface VirtualHumanProps {

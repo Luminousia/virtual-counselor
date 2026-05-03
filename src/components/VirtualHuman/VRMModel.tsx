@@ -770,22 +770,6 @@ const VRMModel: React.FC<VRMModelProps> = ({
     }
   }, [emotion]);
 
-  // 渲染错误状态
-  if (error) {
-    return (
-      <div className="vrm-error">
-        <div className="vrm-error-icon">⚠️</div>
-        <div className="vrm-error-text">{error}</div>
-        <button 
-          className="vrm-error-retry"
-          onClick={() => window.location.reload()}
-        >
-          重新加载
-        </button>
-      </div>
-    );
-  }
-
   return (
     <div 
       ref={containerRef}
@@ -799,20 +783,37 @@ const VRMModel: React.FC<VRMModelProps> = ({
         background: transparent ? 'transparent' : '#fffbf7'
       }}
     >
-      {!isLoaded && (
-        <div className="vrm-loading" style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, zIndex: 10 }}>
+      {/* 加载中覆盖层：transparent 模式下透明背景，保持场景可见 */}
+      {!isLoaded && !error && (
+        <div style={{
+          position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, zIndex: 10,
+          display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+          background: transparent ? 'rgba(0,0,0,0.2)' : 'linear-gradient(135deg, #fef9f3 0%, #fff5f8 100%)'
+        }}>
           <div className="vrm-loading-spinner" />
-          <div className="vrm-loading-text">
+          <div className="vrm-loading-text" style={{ color: transparent ? '#fff' : undefined }}>
             {loadProgress > 0 ? `虚拟人加载中... ${loadProgress}%` : '正在初始化...'}
           </div>
           {loadProgress > 0 && (
             <div className="vrm-loading-progress">
-              <div 
-                className="vrm-loading-progress-bar" 
-                style={{ width: `${loadProgress}%` }} 
-              />
+              <div className="vrm-loading-progress-bar" style={{ width: `${loadProgress}%` }} />
             </div>
           )}
+        </div>
+      )}
+      {/* 错误状态：transparent 模式下不遮挡场景 */}
+      {error && (
+        <div style={{
+          position: 'absolute', top: 16, left: '50%', transform: 'translateX(-50%)',
+          zIndex: 10, background: 'rgba(0,0,0,0.6)', borderRadius: 8, padding: '8px 16px',
+          color: '#fff', fontSize: 13, display: 'flex', alignItems: 'center', gap: 8
+        }}>
+          <span>⚠️</span>
+          <span>模型加载失败</span>
+          <button onClick={() => window.location.reload()} style={{
+            marginLeft: 8, padding: '2px 8px', borderRadius: 4, border: 'none',
+            background: '#e88bb5', color: '#fff', cursor: 'pointer', fontSize: 12
+          }}>重试</button>
         </div>
       )}
     </div>
