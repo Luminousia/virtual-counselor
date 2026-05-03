@@ -13,7 +13,7 @@
     "build:installer": "electron-builder",
     "preview": "vite preview",
     "lint": "eslint . --ext ts,tsx --report-unused-disable-directives --max-warnings 0",
-    "postinstall": "electron-builder install-app-deps"
+    "postinstall": "node -e \"if(!process.env.VERCEL && !process.env.CI) require('child_process').execSync('electron-builder install-app-deps', {stdio:'inherit'})\"" 
   },
   "dependencies": {
     "@pixiv/three-vrm": "^3.4.4",
