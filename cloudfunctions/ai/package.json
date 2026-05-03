@@ -1,0 +1,6 @@
+{
+  "name": "ai",
+  "version": "1.0.0",
+  "description": "DeepSeek AI proxy for CloudBase",
+  "main": "index.js"
+}

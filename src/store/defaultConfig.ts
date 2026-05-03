@@ -73,6 +73,23 @@ export const BUILTIN_MINIMAX_TTS_KEY = import.meta.env.PROD
   ? ''
   : 'sk-api-KDLfbtHcGqSB86QvPXlrPPrnWrY3jqKVLt8L0ZWscxz8McNiJNKmI5ZlabikDNSbs49qY2ARB-3XCVUwfWStZUkiDH_tWntXXcs_XQi7nr_RXm5VtEbN7Ss';
 
+// ==================== CloudBase 代理 URL ====================
+// 部署到腾讯云 CloudBase 时，构建时注入 VITE_CLOUDBASE_ENV_ID
+// 例如 envId = "env-abc123"，region 默认 ap-shanghai
+const _cbEnv = import.meta.env.VITE_CLOUDBASE_ENV_ID as string | undefined
+const _cbRegion = (import.meta.env.VITE_CLOUDBASE_REGION as string) || 'ap-shanghai'
+const _cbBase = _cbEnv ? `https://${_cbEnv}.${_cbRegion}.tcloudbaseapp.com` : ''
+
+// AI 代理：优先使用手动指定 URL，其次 CloudBase 自动生成，最后回退到同域 /api/ai
+export const AI_PROXY_URL: string =
+  (import.meta.env.VITE_AI_API_URL as string) ||
+  (_cbBase ? `${_cbBase}/ai` : '')
+
+// TTS 代理：同上
+export const TTS_PROXY_URL: string =
+  (import.meta.env.VITE_TTS_API_URL as string) ||
+  (_cbBase ? `${_cbBase}/tts` : '/api/tts')
+
 // ==================== AI Provider配置 ====================
 
 export const DEEPSEEK_API_URL = 'https://api.deepseek.com/v1/chat/completions';

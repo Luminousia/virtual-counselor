@@ -5,7 +5,7 @@
 
 import { LipSyncAnalyzer, LipSyncResult } from '../../utils/lipSyncAnalyzer'
 import { useTTSConfigStore, TTSConfig } from '../../store/apiConfigStore'
-import { BUILTIN_MINIMAX_TTS_KEY, DEFAULT_EMOTION_MAP } from '../../store/defaultConfig'
+import { BUILTIN_MINIMAX_TTS_KEY, DEFAULT_EMOTION_MAP, TTS_PROXY_URL } from '../../store/defaultConfig'
 
 export interface AudioChunk {
   text: string
@@ -393,10 +393,10 @@ export class TTSQueueManager {
     config: TTSConfig,
     signal: AbortSignal
   ): Promise<Response> {
-    // 生产环境：走 /api/tts（Key 由 Vercel 环境变量注入，不暴露到浏览器）
+    // 生产环境：走 TTS_PROXY_URL（CloudBase 云函数 或 /api/tts，Key 存服务端）
     // 开发环境：走 Vite 代理 /__minimax-tts（避免 CORS）
     const isProd = import.meta.env.PROD
-    const url = isProd ? '/api/tts' : '/__minimax-tts/v1/t2a_v2'
+    const url = isProd ? TTS_PROXY_URL : '/__minimax-tts/v1/t2a_v2'
     const apiKey = isProd ? '' : ((config.apiKey || '').trim() || BUILTIN_MINIMAX_TTS_KEY)
     
     console.log('[TTSQueue] 调用 MiniMax TTS:', {

@@ -1,0 +1,6 @@
+{
+  "name": "tts",
+  "version": "1.0.0",
+  "description": "MiniMax TTS proxy for CloudBase",
+  "main": "index.js"
+}

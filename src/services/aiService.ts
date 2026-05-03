@@ -1,7 +1,7 @@
 // AI对话服务 - 支持动态API配置
 import axios from 'axios'
 import { useAIConfigStore } from '../store/aiConfigStore'
-import { BUILTIN_DEEPSEEK_AI_KEY, DEEPSEEK_API_URL } from '../store/defaultConfig'
+import { BUILTIN_DEEPSEEK_AI_KEY, DEEPSEEK_API_URL, AI_PROXY_URL } from '../store/defaultConfig'
 
 export interface AIMessage {
   role: 'user' | 'assistant'
@@ -94,21 +94,21 @@ class AIService {
       }
 
       // 调用AI API
-      const response = await axios.post(
-        apiUrl,
-        {
-          model: model,
-          messages: [systemMessage, ...historyMessages, currentUserMessage],
-          temperature: temperature,
-          max_tokens: maxTokens,
-        },
-        {
-          headers: {
-            Authorization: `Bearer ${apiKey}`,
-            'Content-Type': 'application/json',
-          },
-        }
-      )
+      // 生产环境有 CloudBase 代理时走代理（Key 存服务端），否则直接调用（带 Key）
+      const requestBody = {
+        model,
+        messages: [systemMessage, ...historyMessages, currentUserMessage],
+        temperature,
+        max_tokens: maxTokens,
+      }
+      const response = AI_PROXY_URL
+        ? await axios.post(AI_PROXY_URL, requestBody)
+        : await axios.post(apiUrl, requestBody, {
+            headers: {
+              Authorization: `Bearer ${apiKey}`,
+              'Content-Type': 'application/json',
+            },
+          })
 
       // 提取 AI 回复
       const aiResponse = response.data.choices[0]?.message?.content || '抱歉，我无法生成回复。'

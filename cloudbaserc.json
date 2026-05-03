@@ -1,0 +1,57 @@
+{
+  "envId": "{{YOUR_ENV_ID}}",
+  "version": "2.0",
+  "framework": {
+    "name": "virtual-counselor",
+    "plugins": {
+      "client": {
+        "use": "@cloudbase/framework-plugin-website",
+        "inputs": {
+          "buildCommand": "npm run build",
+          "outputPath": "dist",
+          "cloudPath": "/"
+        }
+      },
+      "server": {
+        "use": "@cloudbase/framework-plugin-function",
+        "inputs": {
+          "functionRootPath": "cloudfunctions",
+          "functions": [
+            {
+              "name": "ai",
+              "timeout": 60,
+              "runtime": "Nodejs18.15",
+              "memorySize": 256,
+              "envVariables": {
+                "DEEPSEEK_API_KEY": "{{DEEPSEEK_API_KEY}}"
+              },
+              "triggers": [
+                {
+                  "name": "aiTrigger",
+                  "type": "http",
+                  "config": "/**"
+                }
+              ]
+            },
+            {
+              "name": "tts",
+              "timeout": 60,
+              "runtime": "Nodejs18.15",
+              "memorySize": 256,
+              "envVariables": {
+                "MINIMAX_TTS_KEY": "{{MINIMAX_TTS_KEY}}"
+              },
+              "triggers": [
+                {
+                  "name": "ttsTrigger",
+                  "type": "http",
+                  "config": "/**"
+                }
+              ]
+            }
+          ]
+        }
+      }
+    }
+  }
+}
