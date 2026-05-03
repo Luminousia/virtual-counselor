@@ -55,3 +55,9 @@ genie-tts-server/genie_data/
 public/model.vrm
 public/*.vrma
 public/*.mp3
+
+# wrangler files
+.wrangler
+.dev.vars*
+!.dev.vars.example
+!.env.example
