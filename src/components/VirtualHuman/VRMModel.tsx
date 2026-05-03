@@ -302,8 +302,30 @@ const VRMModel: React.FC<VRMModelProps> = ({
 
     console.log('[VRMModel] 开始加载模型:', modelUrl);
 
+    // 若为 .gz 压缩包，先在浏览器端解压再交给 GLTFLoader
+    const resolveModelUrl = async (url: string): Promise<string> => {
+      if (!url.endsWith('.gz')) return url;
+      console.log('[VRMModel] 检测到 .gz，正在下载并解压...');
+      const resp = await fetch(url);
+      if (!resp.ok || !resp.body) throw new Error(`下载模型失败: ${resp.status}`);
+      const ds = new DecompressionStream('gzip');
+      const blob = await new Response(resp.body.pipeThrough(ds)).blob();
+      return URL.createObjectURL(blob);
+    };
+
+    let resolvedModelUrl: string;
+    try {
+      resolvedModelUrl = await resolveModelUrl(modelUrl);
+    } catch (e) {
+      const err = e instanceof Error ? e : new Error(String(e));
+      console.error('[VRMModel] 模型预处理失败:', err);
+      setError(err.message);
+      onError?.(err);
+      return;
+    }
+
     loader.load(
-      modelUrl,
+      resolvedModelUrl,
       (gltf) => {
         const vrm = gltf.userData.vrm as VRM;
         if (!vrm) {
