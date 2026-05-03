@@ -30,6 +30,15 @@ export class ModelLoader {
     this.loader.register((parser) => new VRMLoaderPlugin(parser));
   }
 
+  // 将 .gz URL 解压并返回 Blob Object URL
+  private async decompressGz(url: string): Promise<string> {
+    const response = await fetch(url);
+    if (!response.ok || !response.body) throw new Error(`下载失败: ${response.status}`);
+    const ds = new DecompressionStream('gzip');
+    const blob = await new Response(response.body.pipeThrough(ds)).blob();
+    return URL.createObjectURL(blob);
+  }
+
   // 加载VRM模型
   async load(url: string, onProgress?: (progress: LoadProgress) => void): Promise<LoadResult> {
     // 取消之前的加载
@@ -38,9 +47,16 @@ export class ModelLoader {
     this.isCancelled = false;
     console.log('[ModelLoader] 开始加载:', url);
 
+    // 若是 gz 压缩包，先在浏览器解压
+    let resolvedUrl = url;
+    if (url.endsWith('.gz')) {
+      console.log('[ModelLoader] 检测到 .gz，正在解压...');
+      resolvedUrl = await this.decompressGz(url);
+    }
+
     return new Promise((resolve, reject) => {
       this.loader.load(
-        url,
+        resolvedUrl,
         (gltf) => {
           if (this.isCancelled) {
             reject(new Error('加载已取消'));
