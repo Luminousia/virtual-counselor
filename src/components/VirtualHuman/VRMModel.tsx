@@ -310,9 +310,13 @@ const VRMModel: React.FC<VRMModelProps> = ({
         try {
           console.log('[VRMModel] 检测到 .gz，正在下载并解压...');
           const resp = await fetch(modelUrl);
-          if (!resp.ok || !resp.body) throw new Error(`下载模型失败: ${resp.status}`);
+          console.log('[VRMModel] 响应状态:', resp.status, resp.headers.get('content-type'));
+          if (!resp.ok || !resp.body) throw new Error(`下载模型失败: HTTP ${resp.status}`);
+          const ct = resp.headers.get('content-type') || '';
+          if (ct.includes('text/html')) throw new Error(`模型文件未部署到CDN (返回了HTML, status=${resp.status})`);
           const ds = new DecompressionStream('gzip');
           const blob = await new Response(resp.body.pipeThrough(ds)).blob();
+          console.log('[VRMModel] 解压完成, blob size:', blob.size);
           resolvedModelUrl = URL.createObjectURL(blob);
         } catch (e) {
           const err = e instanceof Error ? e : new Error(String(e));
