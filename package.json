@@ -6,6 +6,7 @@
   "type": "module",
   "main": "dist-electron/main/index.js",
   "scripts": {
+    "start": "node server.cjs",
     "dev": "vite",
     "dev:electron": "electron-vite dev",
     "build": "tsc && vite build",
@@ -13,7 +14,7 @@
     "build:installer": "electron-builder",
     "preview": "vite preview",
     "lint": "eslint . --ext ts,tsx --report-unused-disable-directives --max-warnings 0",
-    "postinstall": "node -e \"if(!process.env.VERCEL && !process.env.CI) require('child_process').execSync('electron-builder install-app-deps', {stdio:'inherit'})\"" 
+    "postinstall": "node -e \"if(!process.env.VERCEL && !process.env.CI) require('child_process').execSync('electron-builder install-app-deps', {stdio:'inherit'})\""
   },
   "dependencies": {
     "@pixiv/three-vrm": "^3.4.4",
@@ -21,6 +22,7 @@
     "axios": "^1.6.2",
     "electron-store": "^11.0.2",
     "electron-updater": "^6.1.7",
+    "express": "^5.2.1",
     "framer-motion": "^10.16.16",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
