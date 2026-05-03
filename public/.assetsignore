@@ -1,4 +1,6 @@
 # Cloudflare Workers 资产忽略文件
-# 仅排除原始 .vrm（25.5MB 超限），.gz 压缩版 (19MB) 保留上传
+# 仅排除原始 .vrm（25.5MB 超限）和 .gz（CDN 会自动解压导致 double-decompress）
+# model.vrm.bin (19MB gzip data) 保留上传
 /model.vrm
+/model.vrm.gz
 *.vrma

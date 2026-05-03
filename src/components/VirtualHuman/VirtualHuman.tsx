@@ -6,9 +6,9 @@ import './VirtualHuman.css'
 
 // 默认VRM模型路径
 // 生产环境：从 jsDelivr CDN 加载（绕过 Cloudflare 25MB 单文件限制）
-// model.vrm.gz (19MB) 直接托管在 Cloudflare（低于 25MB 限制），同域加载无 CORS 问题
+// model.vrm.bin = gzip 压缩的 VRM（19MB < 25MB 限制），.bin 扩展名避免 Cloudflare CDN 自动解压
 // 开发环境使用本地原始 .vrm
-const DEFAULT_MODEL_URL = import.meta.env.PROD ? '/model.vrm.gz' : '/model.vrm';
+const DEFAULT_MODEL_URL = import.meta.env.PROD ? '/model.vrm.bin' : '/model.vrm';
 
 interface VirtualHumanProps {
   isSpeaking: boolean

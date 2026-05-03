@@ -306,7 +306,7 @@ const VRMModel: React.FC<VRMModelProps> = ({
     (async () => {
       // 若为 .gz 压缩包，先在浏览器端解压再交给 GLTFLoader
       let resolvedModelUrl = modelUrl;
-      if (modelUrl.endsWith('.gz')) {
+      if (modelUrl.endsWith('.gz') || modelUrl.endsWith('.bin')) {
         try {
           console.log('[VRMModel] 检测到 .gz，正在下载并解压...');
           const resp = await fetch(modelUrl);
