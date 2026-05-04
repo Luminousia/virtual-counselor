@@ -20,7 +20,9 @@ class StreamingAIService {
       return { url: DEEPSEEK_API_URL, jsonMode: false }
     }
     if (AI_PROXY_URL) {
-      return { url: AI_PROXY_URL, jsonMode: true }
+      /** 设为 true 时走 CloudBase / 自定义网关的 SSE 透传（需部署新版 ai 云函数）；默认 false（整块 JSON，兼容最全） */
+      const cloudStream = import.meta.env.VITE_AI_SSE === 'true'
+      return { url: AI_PROXY_URL, jsonMode: !cloudStream }
     }
     return { url: '/api/ai', jsonMode: false }
   }
@@ -31,7 +33,7 @@ class StreamingAIService {
     const model = aiConfig.model || 'deepseek-chat'
     const { url: apiUrl, jsonMode } = this.getAiEndpoint()
     console.log(
-      `[StreamingAI] model=${model} prod=${import.meta.env.PROD} cloudJson=${jsonMode} customKey=${!!aiConfig.apiKey}`
+      `[StreamingAI] model=${model} prod=${import.meta.env.PROD} cloudJson=${jsonMode} cloudSse=${import.meta.env.VITE_AI_SSE === 'true'} customKey=${!!aiConfig.apiKey}`
     )
     return { apiKey, apiUrl, model, temperature: 0.7, maxTokens: 500, jsonMode }
   }
@@ -132,6 +134,35 @@ class StreamingAIService {
 
       if (!response.ok) {
         throw new Error(`API 错误: ${response.status}`)
+      }
+
+      /** 同上 AI_PROXY：`context.sse` 不可用时云函数会将流式聚合为整块 JSON（仍走此 SSE 分支） */
+      const contentType = (response.headers.get('Content-Type') || '').toLowerCase()
+      if (contentType.includes('application/json')) {
+        const data = await response.json().catch(() => ({}))
+        const rawErr = (data as { error?: { message?: string } | string })?.error
+        if (rawErr !== undefined && rawErr !== null) {
+          const errMsg =
+            typeof rawErr === 'string'
+              ? rawErr
+              : typeof rawErr === 'object' && rawErr.message
+                ? String(rawErr.message)
+                : JSON.stringify(rawErr)
+          throw new Error(`API 错误: ${response.status} ${errMsg}`)
+        }
+        const fullTextRaw = (data as { choices?: Array<{ message?: { content?: string } }> })
+          ?.choices?.[0]?.message?.content
+        const fullText = typeof fullTextRaw === 'string' ? fullTextRaw.trim() : ''
+        if (fullText) onChunk(fullText)
+        this.conversationHistory.push({ role: 'user', content: userMessage })
+        if (fullText) {
+          this.conversationHistory.push({ role: 'assistant', content: fullText })
+        }
+        if (this.conversationHistory.length > 20) {
+          this.conversationHistory = this.conversationHistory.slice(-20)
+        }
+        onComplete(fullText)
+        return
       }
 
       const reader = response.body?.getReader()

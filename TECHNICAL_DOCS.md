@@ -503,11 +503,10 @@ TTS_PROXY_URL = https://{envId}.ap-shanghai.tcloudbaseapp.com/tts
 
 ### 兼容性注意（CloudBase AI 函数 vs 前端流式）
 
-- **`streamingAIService`（已实现分阶段）**：生产环境若配置了 **`AI_PROXY_URL`**（`VITE_CLOUDBASE_ENV_ID` 或 **`VITE_AI_API_URL`**），则 **`stream: false`**，解析整块 **`choices[0].message.content`**，与 **`cloudfunctions/ai`** 对齐；单次 **`onChunk` 整块**（非打字机 SSE）。否则仍为 **`POST /api/ai` SSE**（或开发直连）。
-- **`cloudfunctions/ai/index.js`**：仍将请求 **`stream`** 强制为 **false**，返回 JSON。
+- **`streamingAIService`**：生产环境下若配置了 **`AI_PROXY_URL`**，**默认 `stream: false` + 整块 JSON**（兼容性最好）。
+- **`VITE_AI_SSE=true`**：同一路径 **`AI_PROXY_URL`** 改为 **`stream: true`**，走 **SSE 打字机**；云函数需在 **`context.sse`** 可用的 HTTP 运行时上部署新版 **`cloudfunctions/ai`**。若运行时无 **`context.sse`**，服务端会把上游 SSE **聚合成整块 JSON**，前端仍可识别 **`Content-Type: application/json`** 并收口为一次 **`onChunk`**。
+- 未配置 **`AI_PROXY_URL`** 时，仍为同源 **`POST /api/ai` SSE**（或开发直连 DeepSeek）。
 - **TTS 云函数**：与 **`ttsQueueManager`** 的 JSON **`/tts`** 匹配。**`MINIMAX_TTS_KEY`**（CloudBase）与 **`MINIMAX_TTS_API_KEY`**（`server.cjs`）命名不同。
-
-**后续可增强：** 云函数 **SSE 透传**、`VITE_AI_SSE` 等开关，在 JSON 网关与远端流式之间切换。
 
 ---
 
@@ -545,6 +544,10 @@ TTS_PROXY_URL = https://{envId}.ap-shanghai.tcloudbaseapp.com/tts
 4. 在 CloudBase 控制台 → 静态网站托管 → 构建环境变量，添加：
    ```
    VITE_CLOUDBASE_ENV_ID = env-xxxxxx
+   ```
+   可选（开启 CloudBase AI 打字机 SSE，见上文「兼容性注意」）：
+   ```
+   VITE_AI_SSE = true
    ```
 5. 重新触发构建
 
