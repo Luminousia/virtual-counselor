@@ -76,7 +76,7 @@ class StreamingAIService {
 
       // ── CloudBase SDK 调用（生产环境 + VITE_CLOUDBASE_ENV_ID）：绕过 CORS ──
       if (isCloudBaseEnv()) {
-        type AIResult = { choices?: Array<{ message?: { content?: string } }> }
+        type AIResult = { choices?: Array<{ message?: { content?: string } }>; error?: string }
         const data = await callCloudFunction<AIResult>('ai', {
           model,
           messages,
@@ -84,6 +84,8 @@ class StreamingAIService {
           max_tokens: maxTokens,
           stream: false,
         })
+        console.log('[StreamingAI] CloudBase callFunction result:', JSON.stringify(data)?.slice(0, 300))
+        if (data?.error) throw new Error(`AI 云函数错误: ${data.error}`)
         const fullText = data?.choices?.[0]?.message?.content?.trim() ?? ''
         if (fullText) onChunk(fullText)
         this.conversationHistory.push({ role: 'user', content: userMessage })

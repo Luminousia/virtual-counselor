@@ -8,6 +8,46 @@ import { useTTSConfigStore, TTSConfig } from '../../store/apiConfigStore'
 import { BUILTIN_MINIMAX_TTS_KEY, DEFAULT_EMOTION_MAP, TTS_PROXY_URL } from '../../store/defaultConfig'
 import { callCloudFunction, isCloudBaseEnv } from '../cloudbaseClient'
 
+/**
+ * 清洗 AI 输出，去掉 TTS 不应朗读的非口语内容：
+ *   - Markdown 标题 / 列表符号 / 水平线
+ *   - **bold** / *italic* / ~~删除线~~ / `code`
+ *   - 动作描述：*动作* / （括号动作）/ [方括号动作]
+ *   - Emoji（可选保留，此处移除）
+ */
+function cleanForTTS(text: string): string {
+  return text
+    // 去掉 Markdown 标题符号
+    .replace(/^#{1,6}\s+/gm, '')
+    // 去掉水平线
+    .replace(/^[-*_]{3,}\s*$/gm, '')
+    // 去掉列表符号（- / * / 1.）
+    .replace(/^[\s]*[-*+]\s+/gm, '')
+    .replace(/^[\s]*\d+\.\s+/gm, '')
+    // 去掉加粗 / 斜体（**text** → text，*text* → text，__text__ → text）
+    .replace(/\*\*\*(.+?)\*\*\*/g, '$1')
+    .replace(/\*\*(.+?)\*\*/g, '$1')
+    .replace(/__(.+?)__/g, '$1')
+    // 去掉动作描述斜体 *action* / _action_（单个星号或下划线包裹的独立短语）
+    .replace(/(?<!\w)\*([^*\n]{1,30})\*(?!\w)/g, '')
+    .replace(/(?<!\w)_([^_\n]{1,30})_(?!\w)/g, '')
+    // 去掉删除线 ~~text~~
+    .replace(/~~(.+?)~~/g, '')
+    // 去掉行内代码 `code`
+    .replace(/`[^`]+`/g, '')
+    // 去掉方括号动作 [action] 和 【action】
+    .replace(/\[([^\]]{1,30})\]/g, '')
+    .replace(/【([^】]{1,30})】/g, '')
+    // 去掉中文括号动作 （action）（限短内容，避免误删正常句子）
+    .replace(/（[^）]{1,20}）/g, '')
+    // 去掉 Emoji（Unicode emoji 范围）
+    .replace(/[\u{1F000}-\u{1FFFF}]/gu, '')
+    .replace(/[\u{2600}-\u{27BF}]/gu, '')
+    // 合并多余空白 / 空行
+    .replace(/\n{3,}/g, '\n')
+    .trim()
+}
+
 export interface AudioChunk {
   text: string
   emotion: string
@@ -87,7 +127,10 @@ export class TTSQueueManager {
    * 添加句子到队列并开始生成
    * @param emotion 由 emotionAnalyzer 检测到的情感，留空则使用 neutral
    */
-  async addSentence(text: string, emotion = 'neutral') {
+  async addSentence(rawText: string, emotion = 'neutral') {
+    const text = cleanForTTS(rawText)
+    if (!text) return   // 清洗后为空（纯符号/格式行）则跳过
+
     // 确保 AudioContext 准备就绪
     await this.ensureAudioContextRunning()
 
