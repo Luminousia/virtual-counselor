@@ -503,9 +503,11 @@ TTS_PROXY_URL = https://{envId}.ap-shanghai.tcloudbaseapp.com/tts
 
 ### 兼容性注意（CloudBase AI 函数 vs 前端流式）
 
-- **`streamingAIService`（前端）**：生产环境下请求体 **`stream: true`**，并按 **SSE**（`text/event-stream`）解析 `data:` 行。
-- **`cloudfunctions/ai/index.js`**：强制 **`stream: false`**，返回 **整块 JSON**。与当前 SSE **不兼容**。TTS 云函数与 **`ttsQueueManager` 所用 JSON** 仍可对接（注意：**`MINIMAX_TTS_KEY`**（CloudBase）与 **`MINIMAX_TTS_API_KEY`**（server.cjs）命名不同）。
-- **落地 CloudBase AI 任选其一：** (1) 改写云函数做 **SSE 透传**；(2) 改写前端在 CloudBase 场景下改调 **非流式** 并解析 `choices[0].message.content`；(3) **静态站仍走同域 `/api/*`**：在网关 / 云主机上跑 **`server.cjs`** 或等价反代。
+- **`streamingAIService`（已实现分阶段）**：生产环境若配置了 **`AI_PROXY_URL`**（`VITE_CLOUDBASE_ENV_ID` 或 **`VITE_AI_API_URL`**），则 **`stream: false`**，解析整块 **`choices[0].message.content`**，与 **`cloudfunctions/ai`** 对齐；单次 **`onChunk` 整块**（非打字机 SSE）。否则仍为 **`POST /api/ai` SSE**（或开发直连）。
+- **`cloudfunctions/ai/index.js`**：仍将请求 **`stream`** 强制为 **false**，返回 JSON。
+- **TTS 云函数**：与 **`ttsQueueManager`** 的 JSON **`/tts`** 匹配。**`MINIMAX_TTS_KEY`**（CloudBase）与 **`MINIMAX_TTS_API_KEY`**（`server.cjs`）命名不同。
+
+**后续可增强：** 云函数 **SSE 透传**、`VITE_AI_SSE` 等开关，在 JSON 网关与远端流式之间切换。
 
 ---
 
@@ -548,12 +550,14 @@ TTS_PROXY_URL = https://{envId}.ap-shanghai.tcloudbaseapp.com/tts
 
 **免费额度（月）：** 静态托管 5GB + CDN 1GB/天 + 云函数 1万次/天
 
-**⚠️ 与当前前端的差距：** 详见 **§五「兼容性注意」**。仅部署本仓库 **`cloudfunctions/ai`** 且前端仍走 **SSE** 时 **不工作**。可行做法：同机或反代跑 **`server.cjs`**；或改云函数／改前端为非流式后再用 `VITE_*` 指到云函数 URL。
+**⚠️ 构建变量：** CloudBase **必须**注入 **`VITE_CLOUDBASE_ENV_ID`**（或手写 **`VITE_AI_API_URL`** / **`VITE_TTS_API_URL`**），否则前端生产包仍会请求 **`/api/ai`**，与纯静态托管环境不匹配。密钥放在云函数控制台环境变量，勿写入 Git。
 
 ### 国内云服务器 + `server.cjs`（与仓库完全对齐）
 
 在任何可跑 Node 的机器上：`npm run build` → 将 **`dist/`** 与 **`server.cjs`**、`package.json`、`node_modules`（或 `npm ci --omit=dev`）一并部署，设置环境变量 **`DEEPSEEK_API_KEY`**、**`MINIMAX_TTS_API_KEY`**，对外监听 **`npm run start`**（默认端口 3000）。前端构建产物 **不须**改写 API 路径。适合 **阿里云 / 腾讯云 ECS / 轻量**。
 
+
+### Cloudflare Workers（境外可用）
 
 已配置 `wrangler.jsonc`，构建命令：
 ```bash

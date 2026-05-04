@@ -5,7 +5,7 @@
 
 import { useCharacterStore } from '../../store/characterStore'
 import { useAIConfigStore } from '../../store/aiConfigStore'
-import { BUILTIN_DEEPSEEK_AI_KEY, DEEPSEEK_API_URL } from '../../store/defaultConfig'
+import { BUILTIN_DEEPSEEK_AI_KEY, DEEPSEEK_API_URL, AI_PROXY_URL } from '../../store/defaultConfig'
 
 export interface StreamingMessage {
   role: 'user' | 'assistant' | 'system'
@@ -15,14 +15,25 @@ export interface StreamingMessage {
 class StreamingAIService {
   private conversationHistory: StreamingMessage[] = []
 
+  private getAiEndpoint(): { url: string; jsonMode: boolean } {
+    if (!import.meta.env.PROD) {
+      return { url: DEEPSEEK_API_URL, jsonMode: false }
+    }
+    if (AI_PROXY_URL) {
+      return { url: AI_PROXY_URL, jsonMode: true }
+    }
+    return { url: '/api/ai', jsonMode: false }
+  }
+
   private getApiConfig() {
     const { aiConfig } = useAIConfigStore.getState()
     const apiKey = (aiConfig.apiKey || '').trim() || BUILTIN_DEEPSEEK_AI_KEY
     const model = aiConfig.model || 'deepseek-chat'
-    // 生产环境：请求走 /api/ai（Key 在 Vercel 环境变量，不暴露到浏览器）
-    const apiUrl = import.meta.env.PROD ? '/api/ai' : DEEPSEEK_API_URL
-    console.log(`[StreamingAI] model=${model} prod=${import.meta.env.PROD} customKey=${!!aiConfig.apiKey}`)
-    return { apiKey, apiUrl, model, temperature: 0.7, maxTokens: 500 }
+    const { url: apiUrl, jsonMode } = this.getAiEndpoint()
+    console.log(
+      `[StreamingAI] model=${model} prod=${import.meta.env.PROD} cloudJson=${jsonMode} customKey=${!!aiConfig.apiKey}`
+    )
+    return { apiKey, apiUrl, model, temperature: 0.7, maxTokens: 500, jsonMode }
   }
 
   /**
@@ -58,20 +69,63 @@ class StreamingAIService {
     ]
 
     try {
-      // 生产环境走 /api/ai，Key 由服务端注入，不在请求头里带
+      const { apiUrl, apiKey, model, temperature, maxTokens, jsonMode } = config
+
       const headers: Record<string, string> = { 'Content-Type': 'application/json' }
       if (!import.meta.env.PROD) {
-        headers['Authorization'] = `Bearer ${config.apiKey}`
+        headers['Authorization'] = `Bearer ${apiKey}`
       }
 
-      const response = await fetch(config.apiUrl, {
+      // ── CloudBase / 远端 JSON 网关：一次请求整块回复（与服务端 cloudfunctions/ai 对齐）──
+      if (jsonMode) {
+        const response = await fetch(apiUrl, {
+          method: 'POST',
+          headers,
+          body: JSON.stringify({
+            model,
+            messages,
+            temperature,
+            max_tokens: maxTokens,
+            stream: false,
+          }),
+        })
+        const data = await response.json().catch(() => ({}))
+        if (!response.ok) {
+          const errMsg = typeof data?.error === 'string' ? data.error : JSON.stringify(data?.error || data)
+          throw new Error(`API 错误: ${response.status} ${errMsg}`)
+        }
+        if (data?.error && typeof data.error === 'object' && data.error.message) {
+          throw new Error(String(data.error.message))
+        }
+
+        const fullText =
+          (data?.choices?.[0]?.message?.content as string | undefined)?.trim?.() ??
+          ''
+
+        // 单次回调：UI/TTS 与流式收口一致（无打字机效果）
+        if (fullText) onChunk(fullText)
+
+        this.conversationHistory.push({ role: 'user', content: userMessage })
+        if (fullText) {
+          this.conversationHistory.push({ role: 'assistant', content: fullText })
+        }
+        if (this.conversationHistory.length > 20) {
+          this.conversationHistory = this.conversationHistory.slice(-20)
+        }
+        onComplete(fullText)
+        return
+      }
+
+      // ── 同源 /api/ai 或直连 DeepSeek：SSE 流式 ──
+
+      const response = await fetch(apiUrl, {
         method: 'POST',
         headers,
         body: JSON.stringify({
-          model: config.model,
-          messages: messages,
-          temperature: config.temperature,
-          max_tokens: config.maxTokens,
+          model,
+          messages,
+          temperature,
+          max_tokens: maxTokens,
           stream: true,
         }),
       })
