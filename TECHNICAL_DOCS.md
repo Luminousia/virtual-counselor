@@ -1,6 +1,6 @@
 # 虚拟数字人心理咨询师「小暖」技术文档
 
-> 版本：v2.1 | 最后更新：2026-05-04
+> 版本：v2.2 | 最后更新：2026-05-04
 
 ---
 
@@ -75,53 +75,49 @@
 
 ```
 project/
-├── src/
+├── index.html                     # SPA 挂载点 → src/main.tsx
+├── package.json                   # npm start → server.cjs；deploy:tcb CloudBase CLI
+├── vite.config.ts                # Dev 代理 /__minimax-*
+├── vercel.json                   # Vercel 构建与 Functions 超时
+├── wrangler.jsonc                # Cloudflare Workers + 静态 assets（dist）
+├── server.cjs                    # Express：dist 静态托管 + /api/ai SSE + /api/tts（自托管必选）
+├── TECHNICAL_DOCS.md             # 本技术文档
+├── .env.cloudbase.example       # CloudBase / VITE_* 构建变量示例（可复制为 .env.production）
+├── electron/                     # Electron 主进程备选（ipc、plugins）；与 src/electron/ 并行
+├── electron.vite.config.ts       # Electron 打包相关（遗留）
+├── cloudfunctions/
+│   ├── ai/index.js               # CloudBase：DeepSeek 代理（强制非流聚合体，与本仓库 stream 语义不同）
+│   └── tts/index.js              # CloudBase：MiniMax 代理
+├── api/
+│   ├── ai.ts                     # Vercel Edge：DeepSeek 流式透传
+│   └── tts.ts                    # Edge：MiniMax
+├── functions/api/                # Cloudflare：同上
+├── public/
+│   ├── .assetsignore             # Workers 静态资产排除清单
+│   ├── scenes/                   # 预设咨询室图等（随 git LFS/.gitignore 可能本地才有）
+│   ├── model_p1.vrm / model_p2.vrm  # 生产分片（可能被 .gitignore 排除，仅部署注入）
+│   └── idle_animation_info.md    # 待机动画说明（文档）
+└── src/
+│   ├── main.tsx / App.tsx / pages/
+│   ├── vite-env.d.ts             # ImportMeta Env 声明
 │   ├── components/
-│   │   ├── Chat/               # 对话界面（输入框、消息列表、聊天窗口）
-│   │   ├── Settings/           # 设置面板（AI配置、TTS配置、人设、资源）
-│   │   └── VirtualHuman/       # 虚拟人组件（VRMModel、ModelLoader、SceneRenderer）
-│   ├── features/
-│   │   ├── animation/          # 程序化待机动画（IdleAnimation、NaturalPose）
-│   │   ├── emoteController/    # 表情控制（ExpressionController、AutoBlink、AutoLookAt）
-│   │   └── lipSync/            # 口型同步（LipSync）
-│   ├── lib/
-│   │   ├── VRMAnimation/       # VRMA 动画加载器
-│   │   └── VRMLookAtSmootherLoaderPlugin/  # 视线平滑插件
+│   │   ├── Chat/
+│   │   ├── Settings/             # ApiConfig.tsx 未被 InteractionPage 引用
+│   │   └── VirtualHuman/          # ★主线 VRMModel；ModelLoader.ts、SceneRenderer.ts、AnimationManager.ts 未挂载
+│   ├── features/                 # 多数为归档参考：animation / emoteController / lipSync
+│   ├── lib/                      # VRMA、LookAt Smoother（GLTFLoader 未注册时用不上）
 │   ├── services/
 │   │   ├── ai/
-│   │   │   ├── streamingAIService.ts   # 流式 AI 对话
-│   │   │   ├── emotionAnalyzer.ts      # 情感分析
-│   │   │   └── sentenceSplitter.ts     # 分句器
 │   │   ├── tts/
-│   │   │   ├── ttsQueueManager.ts      # TTS 队列管理（边生成边播）
-│   │   │   └── minimaxTTSService.ts    # MiniMax TTS 适配器
-│   │   └── storage/
-│   │       └── indexedDBService.ts     # IndexedDB 资源存储
-│   ├── store/
-│   │   ├── aiConfigStore.ts     # AI 配置（模型、API Key）
-│   │   ├── apiConfigStore.ts    # TTS 配置
-│   │   ├── characterStore.ts    # 人设管理（多角色、导入导出）
-│   │   ├── assetStore.ts        # 资源（VRM 模型、场景图）
-│   │   ├── ttsConfigStore.ts    # TTS 参数持久化
-│   │   └── defaultConfig.ts     # 内置凭证、代理 URL 配置中心
-│   └── utils/
-│       ├── lipSyncAnalyzer.ts   # 频域口型分析（Web Audio API）
-│       ├── audioManager.ts      # 音频上下文管理
-│       ├── ttsChunker.ts        # 文本分块
-│       └── textProsodyProcessor.ts  # 韵律处理
-├── cloudfunctions/
-│   ├── ai/index.js              # 腾讯云云函数：DeepSeek 代理
-│   └── tts/index.js             # 腾讯云云函数：MiniMax TTS 代理
-├── api/
-│   ├── ai.ts                    # Vercel Edge Function：DeepSeek 代理
-│   └── tts.ts                   # Vercel Edge Function：MiniMax TTS 代理
-├── functions/api/               # Cloudflare Pages Functions（同上）
-├── public/
-│   ├── model_p1.vrm             # VRM 模型分片 1（~12.8MB）
-│   ├── model_p2.vrm             # VRM 模型分片 2（~12.8MB）
-│   └── .assetsignore            # Cloudflare 资产排除配置
-└── cloudbaserc.json             # 腾讯云 CloudBase 部署配置（本地，不提交 Git）
+│   │   ├── storage/
+│   │   ├── aiService.ts
+│   │   └── index.ts              # 聚合导出（可选）
+│   ├── store/                    # aiConfigStore、ttsConfigStore、apiConfigStore（AI 别名）…
+│   ├── utils/                    # ★lipSyncAnalyzer 被 TTS 引用；audioManager / ttsChunker / prosody：未引用
+│   ├── electron/                 # Electron 备选（对比根目录 electron/）
+│   └── types/css.d.ts
 ```
+**注意：** 含密钥的配置（如 **`cloudbaserc.json`**）常 **仅本地留存**（见 `.gitignore`）；**`cloudfunctions/*.js`** 可作仓库内模版。可复制 **`.env.cloudbase.example`** → `.env.production.local`。
 
 ---
 
@@ -137,17 +133,18 @@ project/
 | 布局与对话框 | ChatVRM / Discord 风：大图 + 底栏对话 | `components/Chat/ChatWindow.tsx` + CSS |
 | 编排中枢 | 串起流式 AI、分句、TTS、虚拟人 Props | `ChatWindow.tsx` |
 | 会话展示 / 输入 | 消息列表、流式占位、输入与快捷键 | `MessageList.tsx`、`InputArea.tsx` |
-| 虚拟人与 3D | 外层容器、`VRMModel`（含 **灯光**：5 光源暖色柔光）、待机动画与表情 | `VirtualHuman.tsx`、`VRMModel.tsx`、`AnimationManager.ts`；`SceneRenderer.ts` 为未接入封装 |
-| 特征子系统 | 待机动画、表情、视线、眨眼、唇形 | `features/animation/*`、`features/emoteController/*`、`features/lipSync/*` |
-| AI / TTS 服务 | 流式与非流式、分句情感、队列与 MiniMax | `services/ai/*`、`services/tts/*`、`utils/*` |
+| 虚拟人与 3D（运行时） | **`VRMModel.tsx` 单体**：加载、灯光、rAF、`updateIdleAnimation`、眨眼、emotion、唇形、`naturalPose` | `VirtualHuman.tsx`（URL）；`SceneRenderer.ts`/`AnimationManager.ts`**未挂载** |
+| 归档 / 备选实现 | IdleAnimation **类**、ExpressionController **链**、VRMA Loader 插件、`features/lipSync` 类等 | `features/`、`utils/audioManager`、`lib/*`——**不与主线 import 等价**，见 §4.8–§4.26 |
+| AI / TTS 服务 | 流式 SSE、可选非流式、分句、情感、`TTSQueueManager` + **`LipSyncAnalyzer`**；部分 `utils/` 仅占位 | `services/ai/*`、`services/tts/*`；**`audioManager`、`ttsChunker`、`textProsodyProcessor` 当前未被 import（见§4）** |
 | 全局状态 | 人设、资源配置、密钥与 TTS 细项 | `store/*` |
 | 客户端大文件存储 | IndexedDB Blob | `services/storage/indexedDBService.ts` |
 | 设置 UI | Tab 人设 / 模型 / 语音 / 资源 | `components/Settings/SettingsPanel.tsx` |
 | 自建 Three 插件 | VRMA / LookAt 平滑 | `lib/VRMAnimation/`、`lib/VRMLookAtSmootherLoaderPlugin/` |
 | 边缘与后端代理 | CloudBase / Vercel / Cloudflare | `cloudfunctions/`、`api/`、`functions/api/` |
 
-**备选或未挂主流程的组件：** `ChatInterface.tsx` + `MessageBubble.tsx`（更丰富 Framer Motion 气泡，当前主页未引入）；`ApiConfig.tsx`（独立表单，功能已并入 SettingsPanel）；Electron 源码仍保留用于桌面打包场景，主业为 Web SPA。
+**备选或未挂主流程的组件：** `ChatInterface.tsx` + `MessageBubble.tsx`；`ApiConfig.tsx`。**Electron：** `src/electron/` 与根目录 `electron/` 双源码树并存，主线为 Web SPA。
 
+**误读提醒：** 仅凭「目录存在」不能推断模块已挂载，须核对 **静态 import**，见 §4.8–§4.26。
 ---
 
 ### 4.1 应用入口与页面外壳
@@ -253,38 +250,54 @@ rAF
 
 ---
 
-### 4.8 动画状态管理（AnimationManager）
+### 4.8 动画状态管理（AnimationManager，未挂载）
 
 **文件：** `AnimationManager.ts`
 
-**思路：** 维护 `AnimationState`（emotion、textType、lipSync、是否说话），内部维护 **表情 blendshape 权重图** 与向目标权重的 **插值速度**。与 `ExpressionController` 有功能重叠历史；当前架构中二者配合：一层偏「业务状态机」，一层偏「VRM Expression 细节与 AIRI 式过渡」。新增表情时优先查清哪一层在 **每帧最后写入**，避免双重覆盖。
+**现状（静态扫描）：** 类内实现表情状态机与 blendshape 插值逻辑，设计意图是 **AIRI 式二层状态管理**。**当前仓库无任何 `import AnimationManager`**，与 `SceneRenderer.ts` 同为「从历史重构拆分出的占位文件」，**不参与运行**。若以该类为蓝图维护功能，请先接到 `VRMModel` 或抽到 hook，否则会与下方「已实现于 VRM 单文件内的逻辑」重复。
 
 ---
 
-### 4.9 程序化待机动画（idleAnimation / naturalPose）
+### 4.9 程序化待机动画与自然姿态
 
-- **`idleAnimation.ts`**：不依赖 VRMA，用 **正弦/随机相位** 驱动髋、脊柱、颈、肩等骨骼在 **初始姿态基准** 上叠加小幅度旋转/位移，并带「微风」扰动以晃 SpringBone 头发。
-- **`naturalPose.ts`**：在加载后或循环中 **修正手臂/肩膀** 自然下垂，减少库存模型默认 T-Pose 感。
+**运行时路径（挂载）：**
 
-**设计原则：** 所有偏移相对 **缓存的初始 bind 姿态** 计算，避免误差累积导致模型「漂」成 T-Pose。
+- **`VRMModel.tsx` 局部函数 `updateIdleAnimation(vrm, delta)`**：在 `rAF` 内对每个 tick 调用，实现 **躯干/肩颈的简化正弦型微动**。这是用户实际看到的待机效果。**不**依赖 `idleAnimation.ts` 中的类。
+
+- **`naturalPose.ts`**：`setNaturalPose`、`maintainArmPose` — **已由 `VRMModel` import**，加载后微调手臂等骨骼，减弱 T-Pose / 夹着胳膊感。
+
+**归档 / 可选路径：**
+
+- **`features/animation/idleAnimation.ts`**：**独立类 IdleAnimation**，带呼吸、摇曳、微风等更丰富参数。**未被任何组件引入**，可作未来「从 VRM 单文件拆分」时的参考实现或与 `updateIdleAnimation` 对齐后替换。
 
 ---
 
-### 4.10 表情、视线与眨眼（ExpressionController / AutoLookAt / AutoBlink）
+### 4.10 表情、视线与眨眼（主线 vs `features/emoteController`）
 
-- **`ExpressionController`**：按情绪名查 `_emotionStates`（如 happy 弱强度、多 blend 组合），用 **Map 记录当前/目标表情值**，每帧 `lerp`；支持 **定时回 neutral**、与唇形 layer 协调。
-- **`AutoLookAt`**：设置 `vrm.lookAt` 目标（如屏幕外一点），减少僵直盯镜头。
-- **`AutoBlink`**：随机间隔触发 blink 表情；需 **与说话状态互斥**，且初始必须为睁眼（历史 bug 为初始 blink=1 导致一直闭眼）。
+**运行时路径（挂载）——均在 `VRMModel.tsx` 内：**
+
+- **情绪表情**：监听父组件传入的 `emotion` prop，`expressionRef`/`emotionRef`，在 `expressionManager` 上对 **可用 blendshape** 集合做加权与平滑（含 happy/sad/neutral 等与其它口型图层协调）。
+- **眨眼**：`blinkExpressionRef` 动态解析 `Blink`/`blink`/左右眼等 naming；随机间隔触发 `blinkActiveRef`，在 `delta` 上插值开合；与说话状态错峰。
+- **LookAt**：`lookAtTarget` 挂在 Camera 子节点（见文件中注释 ChatVRM 风格），使人偶视线朝向摄像机方向。
+
+**未挂载套件（可参考 AIRI / ChatVRM 迁移）：**
+
+- **`expressionController.ts` + `autoBlink.ts` + `autoLookAt.ts`**：三者形成闭包。**仅 ExpressionController import 另外两个**；表达式控制器本体 **未被 VRMModel 或其它 UI 引入**。若在文档别处仍写「ExpressionController 每帧驱动」，应理解为 **与当前主干实现等价的设计参考**，而非运行事实。
 
 ---
 
 ### 4.11 口型与音频管线
 
-- **`lipSyncAnalyzer.ts`（主路径）**：`AnalyserNode` **频域** `getByteFrequencyData`，将能量分布映射到 A/E/I/O/U，再映射到 VRM 标准 preset（`aa`/`ee`/`ih`/`oh`/`ou`），带 attack/release 与静音阈值。
-- **`features/lipSync/lipSync.ts`**：**时域**峰值 + sigmoid 得到 volume，提供 `playFromArrayBuffer`/`playFromURL`；可作为备用或对比实现。
-- **`audioManager.ts`**：统一创建 `AudioContext`、Analyser、`playAudio` 连接 **destination + analyser**，并可用 `requestAnimationFrame` 持续回调音量（供 UI 或简化口型）。
+**实际挂载：**
 
-**数据流：** TTS 解码后的 `ArrayBuffer` → `BufferSource` → **Analyser** → 每帧读数 → `ChatWindow` 状态 → `VirtualHuman` → `VRMModel` 写 expression。
+- **`lipSyncAnalyzer.ts` + `ttsQueueManager`**：`TTSQueueManager` 自建 `AudioContext`、**`AnalyserNode`（fftSize=256）**，`source → analyser → destination`；`LipSyncAnalyzer` 每帧 `update()` 产出 `LipSyncResult`，经 `onLipSyncUpdate` 回调传到 `ChatWindow` → `VRMModel` 写口型 blendshape。
+
+**未挂载 / 备用：**
+
+- **`utils/audioManager.ts`**：**提供** `createAudioManager`、`playAudio`、`calculateVolume`（AIRI 风格 sigmoid 音量）。**当前未被 import**；与 `ttsQueueManager` 内置逻辑 **功能重复**，属可合并或删除的候选。
+- **`features/lipSync/lipSync.ts`**：**`LipSync` 类**（时域 + sigmoid）。**无引用**，与上条同类备用实现。
+
+**结论：** 主干口型数据流为 **`ttsQueueManager` ↔ `lipSyncAnalyzer` ↔ UI ↔ VRM**，勿与未使用文件混淆。
 
 ---
 
@@ -292,9 +305,10 @@ rAF
 
 **文件：** `streamingAIService.ts`
 
-**思路：** `fetch` + `ReadableStream` 解析 **SSE**（`data: {...}` 行），拼 `choices[0].delta.content`。生产环境 `apiUrl` 现为 **`/api/ai` 同源代理**（与 Vercel/Cloudflare 边缘函数对齐）；开发环境直打 `https://api.deepseek.com/...` 并带本地 Key。
+**思路：** `fetch` + `ReadableStream` 解析 **SSE**。开发环境：`DEEPSEEK_API_URL` + `Authorization` 头。**生产环境**（`import.meta.env.PROD`）：固定请求 **`POST /api/ai`**（与 `streamingAIService` 内注释一致），**不在请求中带 Key**，指望 **同源网关**（Vercel/Cloudflare/Express 见 §五）代为加 `Bearer`。
 
-**历史注意：** `defaultConfig` 中的 `AI_PROXY_URL` 供 **`aiService`（非流式）** 等路径使用；主聊天 **ChatWindow 仅依赖本文件的 URL 规则**，若全站统一 CloudBase，应在后续迭代让 `streamingAIService` 与 `AI_PROXY_URL` **同源配置**，避免双轨。
+**与 `AI_PROXY_URL`（`defaultConfig.ts`）的关系：** **`streamingAIService` 当前并不读取 `AI_PROXY_URL`。** CloudBase HTTP 域名典型为 `{env}.{region}.tcloudbaseapp.com/ai`，与静态站 **不同源**；若生产构建未把 AI 反向代理回 `/api/ai`，则需 **改此处 URL 或通过网关统一域名**。非流式的 `aiService` 已改用 `AI_PROXY_URL` / 直连。**建议后续合并为单一 `getAIEndpoint()`。**
+
 
 **Prompt：** `getSystemPrompt()` 从 `characterStore` 拉取，实现 **与人设模块单一数据源**。
 
@@ -331,8 +345,8 @@ rAF
 
 ### 4.16 文本辅助（ttsChunker / TextProsodyProcessor）
 
-- **`ttsChunker.ts`**：参考 AIRI 的 **硬/软标点** 与 `Intl.Segmenter`（若可用）做 **词级分块**，生成带 `reason` 的 `TTSChunk` 生成器；适合更细粒度 TTS 调度（与 `SentenceSplitter` 互补：后者服务流式句界，前者服务长句内部节奏）。
-- **`TextProsodyProcessor`**：对纯文本做 **换行停顿**、情感词附近断句等 **文本级韵律预处理**；可用于增强朗读节奏（是否接入主路径视产品配置而定）。
+- **`ttsChunker.ts`**：词级 `TTSChunk` 生成器（硬/软标点、`Intl.Segmenter`）。**当前无 import**，与 `SentenceSplitter` 相邻，属 **预留／AIRI 对齐**。
+- **`TextProsodyProcessor`**：韵律预处理（句号后换行等）。**当前无 import**，未接 TTS。
 
 ---
 
@@ -376,39 +390,49 @@ rAF
 
 ---
 
-### 4.21 自建库（VRMAnimation / LookAt Smoother）
+### 4.21 自建库（VRMAnimation / LookAt Smoother，未挂载到 Loader）
 
-- **`lib/VRMAnimation/`**：加载 `.vrma`、挂到 VRM 的 clip 体系；主流程若未强制依赖外部动画文件，仍可作为 **扩展动作** 入口。
-- **`VRMLookAtSmootherLoaderPlugin`**：在解析阶段包装 `lookAt` 行为，减轻 **瞬间扭头** 的机械感（与 `AutoLookAt` 策略叠加时注意不要过度滤波）。
-
----
-
-### 4.22 ModelLoader（补充）
-
-**文件：** `ModelLoader.ts`
-
-**定位：** 面向 **类式加载、进度、错误处理** 的封装；当前主路径中 `VRMModel` 可能部分逻辑重复。维护时以 **实际运行路径（VRMModel useEffect）** 为准；合并重复可减少「一处修了分片、另一处未修」风险。
+- **`lib/VRMAnimation/`**：VRMA Loader 插件与 `loadVRMAnimation`。**`VRMModel` 的 `GLTFLoader` 当前只注册 `VRMLoaderPlugin`**，未注册 VRMA，故 **运行时不会加载 .vrma**。保留作动作扩展代码。
+- **`VRMLookAtSmootherLoaderPlugin`**：**未注册**；主线 LookAt 在 **`VRMModel`（相机挂点）**。
 
 ---
 
-### 4.23 Electron 桌面壳（可选）
+### 4.22 ModelLoader（未挂载）
 
-**路径：** `src/electron/*`
-
-**思路：** 主进程窗口、托盘、快捷键、自动更新等经典 Electron 结构。Web 部署为主时 **可不构建**；若打包桌面，需单独处理 **与 Web 相同的 API 代理**（本地无 `/api/ai` 时需配 dev server 或内置 proxy）。
+**文件：** `ModelLoader.ts`，**工程内无引用**。主干加载与 **分片合并** 已全部在 **`VRMModel.tsx`**；此类为遗留封装。
 
 ---
 
-### 4.24 构建与本地开发（Vite）
+### 4.23 Electron 桌面壳（双路径并行）
 
-**文件：** `vite.config.ts`
-
-- **React 插件** + 开发 Server `host: true`、`open: true`。
-- **代理**：`/__minimax-ai`、`/__minimax-tts` → `https://api.minimaxi.com`，`changeOrigin` 解决浏览器 CORS。
-
-**`package.json` 的 `build`：** 构建前删除 `dist` 与 `node_modules/.vite`，减轻 **CI 与 Cloudflare 缓存导致的旧 bundle** 问题。
+**`src/electron/*`** 与根目录 **`electron/main/*`、`ipc/*`、`preload/*`、`plugins/*`** **两套 Electron 源码并存**，职责重叠。**当前交付为浏览器 SPA**。若恢复桌面打包，宜 **选型一条链**并清理冗余，并自备 `/api/ai`、`/api/tts`（或打包进 Electron）。
 
 ---
+
+### 4.24 Vite、`server.cjs` 与 `npm run start`
+
+- **`vite.config.ts`**：`host`、`open`、`/__minimax-*` → `api.minimaxi.com`。
+- **`npm run build`**：清 `dist` + `node_modules/.vite` 后 `vite build`。
+- **`server.cjs`**：Express，`express.static('dist')`；**`POST /api/ai`** 透传 DeepSeek SSE（`DEEPSEEK_API_KEY`）；**`POST /api/tts`** 转发 MiniMax（`MINIMAX_TTS_API_KEY`）。
+- **`npm run start`** = `node server.cjs`（`PORT`，默认 **3000**）。与 **`streamingAIService` 生产的 `/api/ai`** 同源约定一致，适合于 **ECS/轻量/Docker/pm2**。
+- **入口：** 根 **`index.html`** → **`src/main.tsx`** → **`App.tsx`**。**`src/types/css.d.ts`**：CSS Modules 声明。
+
+---
+
+### 4.25 `defaultConfig`、`vite-env`、`cloudbaserc` 与安全
+
+**`src/store/defaultConfig.ts`：** `CONFIG_VERSION`、`MINIMAX_TTS_VOICES`、`DEEPSEEK_MODELS`、`AI_PROXY_URL` / `TTS_PROXY_URL`（CloudBase 推导）；`BUILTIN_*` 仅限开发。
+
+**注意：** **`streamingAIService` 不使用 `AI_PROXY_URL`**（见 §4.12）。
+
+**`.env`**：范例见 **`.env.cloudbase.example`。** **`cloudbaserc.json` 被 `.gitignore`**（密钥），仅存本地或 CI Secret。
+
+---
+
+### 4.26 `services/index.ts`
+
+**聚合导出**现行服务（streaming、emotion、tts、indexedDB、`aiService` 等）；业务模块多仍 **深层路径** import。曾误指向已删除的语音文件，现已修正对齐仓库。
+
 
 **（以下各节为第四章涉及的核心能力速查表，与上文对应，便于检索。）**
 
@@ -470,11 +494,18 @@ TTS_PROXY_URL = https://{envId}.ap-shanghai.tcloudbaseapp.com/tts
 
 ### 各平台代理文件
 
-| 平台 | AI 代理 | TTS 代理 |
-|------|---------|---------|
-| 腾讯云 CloudBase | `cloudfunctions/ai/index.js` | `cloudfunctions/tts/index.js` |
-| Cloudflare Workers | `functions/api/ai.ts` | `functions/api/tts.ts` |
-| Vercel | `api/ai.ts` | `api/tts.ts` |
+| 平台 | AI 代理 | TTS 代理 | 与当前前端匹配度 |
+|------|---------|---------|------------------|
+| **Node 同源** | `server.cjs`：`POST /api/ai` SSE 透传 | `POST /api/tts` JSON | ✅ 与生产前端默认路径一致 |
+| Vercel | `api/ai.ts` SSE 透传 | `api/tts.ts` | ✅ |
+| Cloudflare | `functions/api/ai.ts` | `functions/api/tts.ts` | ✅ |
+| 腾讯云 CloudBase | `cloudfunctions/ai/index.js` | `cloudfunctions/tts/index.js` | ⚠️ **见下文** |
+
+### 兼容性注意（CloudBase AI 函数 vs 前端流式）
+
+- **`streamingAIService`（前端）**：生产环境下请求体 **`stream: true`**，并按 **SSE**（`text/event-stream`）解析 `data:` 行。
+- **`cloudfunctions/ai/index.js`**：强制 **`stream: false`**，返回 **整块 JSON**。与当前 SSE **不兼容**。TTS 云函数与 **`ttsQueueManager` 所用 JSON** 仍可对接（注意：**`MINIMAX_TTS_KEY`**（CloudBase）与 **`MINIMAX_TTS_API_KEY`**（server.cjs）命名不同）。
+- **落地 CloudBase AI 任选其一：** (1) 改写云函数做 **SSE 透传**；(2) 改写前端在 CloudBase 场景下改调 **非流式** 并解析 `choices[0].message.content`；(3) **静态站仍走同域 `/api/*`**：在网关 / 云主机上跑 **`server.cjs`** 或等价反代。
 
 ---
 
@@ -517,7 +548,12 @@ TTS_PROXY_URL = https://{envId}.ap-shanghai.tcloudbaseapp.com/tts
 
 **免费额度（月）：** 静态托管 5GB + CDN 1GB/天 + 云函数 1万次/天
 
-### Cloudflare Workers（境外可用）
+**⚠️ 与当前前端的差距：** 详见 **§五「兼容性注意」**。仅部署本仓库 **`cloudfunctions/ai`** 且前端仍走 **SSE** 时 **不工作**。可行做法：同机或反代跑 **`server.cjs`**；或改云函数／改前端为非流式后再用 `VITE_*` 指到云函数 URL。
+
+### 国内云服务器 + `server.cjs`（与仓库完全对齐）
+
+在任何可跑 Node 的机器上：`npm run build` → 将 **`dist/`** 与 **`server.cjs`**、`package.json`、`node_modules`（或 `npm ci --omit=dev`）一并部署，设置环境变量 **`DEEPSEEK_API_KEY`**、**`MINIMAX_TTS_API_KEY`**，对外监听 **`npm run start`**（默认端口 3000）。前端构建产物 **不须**改写 API 路径。适合 **阿里云 / 腾讯云 ECS / 轻量**。
+
 
 已配置 `wrangler.jsonc`，构建命令：
 ```bash
@@ -551,7 +587,7 @@ git checkout -- src/ && rm -rf dist node_modules/.vite && npx vite build
 
 **问题：** AutoBlink 逻辑错误，在初始化时直接设置 `blink=1`，导致眼睛始终闭合。
 
-**修正：** 重写 `AutoBlink`，初始化时 blink=0（睁眼），定时随机触发眨眼动作，并与口型同步互斥。
+**修正：** 重写 `AutoBlink`，初始化时 blink=0（睁眼），定时随机触发眨眼动作，并与口型同步互斥。（**当前主线**中同类逻辑在 **`VRMModel.tsx` 内联**；`features/emoteController/autoBlink.ts` 仅为未挂载的参考实现。）
 
 ---
 
@@ -617,10 +653,15 @@ git checkout -- src/ && rm -rf dist node_modules/.vite && npx vite build
 
 **问题：** Cloudflare Workers 在中国大陆访问不稳定或完全无法访问。
 
-**修正：** 切换到 **腾讯云 CloudBase** 部署方案：
-- 静态托管（国内 CDN）+ 云函数（Node.js）代理 API
-- 前端通过 `VITE_CLOUDBASE_ENV_ID` 环境变量自动推算云函数 HTTP 触发器地址
-- 代码兼容多平台，同一套源码可部署到 CloudBase / Cloudflare / Vercel
+**修正：** 将 **静态资源与用户侧访问** 迁移到腾讯云 CloudBase 等境内更友好的服务；API 仍可继续用 **`server.cjs` / Vercel / Cloudflare** 等与 **SSE 前端兼容**的方案。⚠️ 若仅启用本仓库 **CloudBase `cloudfunctions/ai`（JSON 非流）** 且不改造前端，则 **不满足**当前 `streamingAIService`——详见 **§五**。
+
+---
+
+### 修正 9：TTS「使用内置配置」Checkbox
+
+**问题：** 复选框逻辑错误导致无法取消「使用内置」。
+
+**修正：** 更正 `SettingsPanel` 中与 `ttsConfigStore` / 本地状态的同步。
 
 ---
 
@@ -632,4 +673,17 @@ git checkout -- src/ && rm -rf dist node_modules/.vite && npx vite build
 
 ---
 
+### 修正 11：静态扫描校对文档与代码挂载关系
+
+对照 **静态 import**，明确：**`idleAnimation`、`emoteController`、`lipSync`、`AnimationManager`、`ModelLoader`、`audioManager`、`ttsChunker`、`textProsodyProcessor`、`lib/VRMAnimation`、`VRMLookAtSmoother` 等与主线脱节**；**`VRMModel.tsx`、`ttsQueueManager`、`lipSyncAnalyzer` 为运行时核心**。详见正文 **§4.0–§4.26**。
+
+---
+
+### 修正 12：`services/index` 与环境类型声明清理
+
+**问题：** `src/services/index.ts` 仍导出已删除的语音识别/合成模块占位，易造成误用。
+
+**修正：** `index.ts` 改为仅导出仓内仍存在的服务；`vite-env.d.ts` 增补 `VITE_CLOUDBASE_*` 与手写 API URL。
+
+---
 *文档由 Cursor AI 辅助整理，持续更新中。*

@@ -1,13 +1,14 @@
 /**
- * Services 模块导出
- * 统一导出所有服务模块
+ * Services 聚合导出（便于按需 import）。
+ * 主流程组件多直接深层路径引用本目录子模块。
  */
 
-// 语音识别服务
-export { default as SpeechRecognitionService, type SpeechRecognitionConfig, type SpeechRecognitionEventMap } from './SpeechRecognition';
+export { streamingAIService } from './ai/streamingAIService'
+export { emotionAnalyzer } from './ai/emotionAnalyzer'
+export { SentenceSplitter } from './ai/sentenceSplitter'
+export { aiService } from './aiService'
 
-// 语音合成服务
-export { default as SpeechSynthesisService, type SpeechSynthesisConfig, type SpeechSynthesisEvents } from './SpeechSynthesis';
+export { ttsQueueManager } from './tts/ttsQueueManager'
+export { MinimaxTTSService, minimaxTTSService, MINIMAX_VOICES } from './tts/minimaxTTSService'
 
-// 导出类型
-export type { VoiceInfo } from './SpeechSynthesis';
+export { indexedDBService } from './storage/indexedDBService'
