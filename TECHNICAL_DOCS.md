@@ -137,7 +137,7 @@ project/
 | 布局与对话框 | ChatVRM / Discord 风：大图 + 底栏对话 | `components/Chat/ChatWindow.tsx` + CSS |
 | 编排中枢 | 串起流式 AI、分句、TTS、虚拟人 Props | `ChatWindow.tsx` |
 | 会话展示 / 输入 | 消息列表、流式占位、输入与快捷键 | `MessageList.tsx`、`InputArea.tsx` |
-| 虚拟人与 3D | 外层容器 → 画布与循环 → 加载与表情 | `VirtualHuman.tsx`、`VRMModel.tsx`、`SceneRenderer.ts`、`AnimationManager.ts` |
+| 虚拟人与 3D | 外层容器、`VRMModel`（含 **灯光**：5 光源暖色柔光）、待机动画与表情 | `VirtualHuman.tsx`、`VRMModel.tsx`、`AnimationManager.ts`；`SceneRenderer.ts` 为未接入封装 |
 | 特征子系统 | 待机动画、表情、视线、眨眼、唇形 | `features/animation/*`、`features/emoteController/*`、`features/lipSync/*` |
 | AI / TTS 服务 | 流式与非流式、分句情感、队列与 MiniMax | `services/ai/*`、`services/tts/*`、`utils/*` |
 | 全局状态 | 人设、资源配置、密钥与 TTS 细项 | `store/*` |
@@ -218,18 +218,38 @@ rAF
   → ExpressionController（表情插值、眨眼、LookAt）
   → 口型（频域分析结果写 blendshape）
   → vrm.update（SpringBone 等）
-  → SceneRenderer.render
+  → renderer.render(scene, camera)   ← 直接在 VRMModel 内渲染，不经 SceneRenderer
 ```
 
-**其它：** `setNaturalPose` / `maintainArmPose`（`naturalPose.ts`）缓解 T-Pose、夹臂等默认绑定问题；`transparent` 时 renderer 清屏 alpha 与场景背景配合。
+**其它：** `setNaturalPose` / `maintainArmPose`（`naturalPose.ts`）缓解 T-Pose、夹臂等默认绑定问题；`transparent` 时 `scene.background = null` 且 `renderer.setClearColor(0x000000, 0)`，便于底层 HTML 场景图透出。
 
 ---
 
-### 4.7 三维场景抽象（SceneRenderer）
+#### 灯光实现方案（当前线上生效）
+
+**位置：** `VRMModel.tsx` 初始化 `THREE.Scene` 之后、`loader.load` 之前（约 268–297 行）。
+
+**设计理念：** 「日系动漫偶像」向的 **多角度柔光**：主光把脸打亮、补光吃阴影、顶光提亮发丝、半球光铺粉调环境、环境光收口暗角。全部为 **THREE 内置无阴影光源**，不启用 `castShadow`，性能稳定，也减少与 Toon/MToon 的阴影撕裂问题。
+
+| 光源变量 | 类型 | 颜色 | 强度 | 位置（示意） | 作用 |
+|----------|------|------|------|----------------|------|
+| `keyLight` | `DirectionalLight` | `0xFFF5EE` | **1.5** | `(0.4, 1.2, 2.0)` | 正前偏右上主光，面部主照明 |
+| `fillLight` | `DirectionalLight` | `0xFFDDD8` | **0.7** | `(-1.2, 0.5, 1.5)` | 左前补光，减轻鼻影与面颊暗部 |
+| `hairLight` | `DirectionalLight` | `0xFFFFFF` | **0.6** | `(0, 3, 0.8)` | 顶前轮廓光，头发高光 |
+| `hemiLight` | `HemisphereLight` | 天空 `0xFFD8E4` / 地面 `0xEED4C4` | **0.6** | 默认轴向 | 上粉下暖的包围光，弱化「死黑轮廓」 |
+| `ambientLight` | `AmbientLight` | `0xFFECE4` | **0.55** | — | 整体提亮，压住残余死角 |
+
+代码中有注释归纳为：**前方均匀暖白主光 + 左侧柔和补光 + 头顶纯白发丝高光 + 樱花粉天光 / 暖肤地面反射**，目标为 **整体偏暖、少硬阴影**，契合「小暖」人设的视觉气质。
+
+**与透明场景：** 光照只作用于 VRM；2D 咨询室场景在 DOM/CSS 层。若以后要 **IBL/环境反射**，需另行加载 HDR 或通过 `CubeTexture`，并与「透明画布」的合成方式协调。
+
+---
+
+### 4.7 三维场景抽象（SceneRenderer，未接入主线）
 
 **文件：** `SceneRenderer.ts`
 
-**思路：** 将 Three.js 的 `Scene` / `WebGLRenderer` / `PerspectiveCamera` / `Clock` 与 **多光源**（主光、环境光、补光、顶光）封装成类，对外提供 `resize`、`render`、`dispose`。好处是 **VRMModel 专注「角色逻辑」**，场景与像素比、色彩空间（`SRGBColorSpace`）统一在此处理。
+**思路：** 将 `Scene` / `WebGLRenderer` / `PerspectiveCamera` / `Clock` 封装成类，`setupLighting()` 内为 **另一类四灯**：主方向光（颜色 `0xfff0f5`，强度 **1.2**）+ `AmbientLight`（强度 **0.85**）+ 补方向光（**0.4**）+ 顶方向光（**0.3**）；另支持雾、`setBackgroundImage`（等距贴图映射作全景背景）、`setLightIntensity` / `resetCameraPosition` 等。**当前工程中无任何文件 `import SceneRenderer`**，仅为重构预留；**切勿与 `VRMModel` 内灯光同时使用**，否则会 **叠加两套光**。
 
 ---
 
