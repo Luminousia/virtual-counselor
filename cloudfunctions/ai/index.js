@@ -3,8 +3,9 @@
 const DEEPSEEK_URL = 'https://api.deepseek.com/v1/chat/completions'
 
 exports.main = async (event, context = {}) => {
-  if (event.httpMethod === 'OPTIONS') {
-    return { statusCode: 200, headers: cors(), body: '' }
+  const method = (event.httpMethod || '').toUpperCase()
+  if (method === 'OPTIONS') {
+    return { statusCode: 204, headers: cors(), body: '' }
   }
 
   const apiKey = process.env.DEEPSEEK_API_KEY
@@ -242,8 +243,10 @@ function chatCompletionEnvelope(content) {
 function cors() {
   return {
     'Access-Control-Allow-Origin': '*',
-    'Access-Control-Allow-Methods': 'POST, OPTIONS',
-    'Access-Control-Allow-Headers': 'Content-Type',
+    'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
+    'Access-Control-Allow-Headers': 'Content-Type, Authorization, Accept, X-Requested-With',
+    'Access-Control-Allow-Credentials': 'false',
+    'Access-Control-Max-Age': '86400',
   }
 }
 

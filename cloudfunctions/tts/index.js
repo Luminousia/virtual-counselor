@@ -5,8 +5,9 @@ const https = require('https')
 const MINIMAX_URL = 'https://api.minimaxi.com/v1/t2a_v2'
 
 exports.main = async (event) => {
-  if (event.httpMethod === 'OPTIONS') {
-    return { statusCode: 200, headers: cors(), body: '' }
+  const method = (event.httpMethod || '').toUpperCase()
+  if (method === 'OPTIONS') {
+    return { statusCode: 204, headers: cors(), body: '' }
   }
 
   const apiKey = process.env.MINIMAX_TTS_KEY
@@ -63,8 +64,10 @@ function post(url, data, apiKey) {
 function cors() {
   return {
     'Access-Control-Allow-Origin': '*',
-    'Access-Control-Allow-Methods': 'POST, OPTIONS',
-    'Access-Control-Allow-Headers': 'Content-Type'
+    'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
+    'Access-Control-Allow-Headers': 'Content-Type, Authorization, Accept, X-Requested-With',
+    'Access-Control-Allow-Credentials': 'false',
+    'Access-Control-Max-Age': '86400',
   }
 }
 
