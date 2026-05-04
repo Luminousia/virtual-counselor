@@ -11,7 +11,8 @@
     "build": "node -e \"['dist','node_modules/.vite'].forEach(d=>{try{require('fs').rmSync(d,{recursive:true,force:true})}catch(e){}})\" && vite build",
     "preview": "vite preview",
     "lint": "eslint . --ext ts,tsx --report-unused-disable-directives --max-warnings 0",
-    "deploy:tcb": "tcb framework deploy",
+    "deploy:tcb": "npm run build && tcb hosting deploy ./dist / && tcb fn deploy ai --dir cloudfunctions/ai --path /ai --force && tcb fn deploy tts --dir cloudfunctions/tts --path /tts --force",
+    "deploy:tcb:framework": "tcb framework deploy",
     "login:tcb": "tcb login"
   },
   "dependencies": {

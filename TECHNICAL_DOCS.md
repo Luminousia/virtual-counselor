@@ -305,9 +305,9 @@ rAF
 
 **文件：** `streamingAIService.ts`
 
-**思路：** `fetch` + `ReadableStream` 解析 **SSE**。开发环境：`DEEPSEEK_API_URL` + `Authorization` 头。**生产环境**（`import.meta.env.PROD`）：固定请求 **`POST /api/ai`**（与 `streamingAIService` 内注释一致），**不在请求中带 Key**，指望 **同源网关**（Vercel/Cloudflare/Express 见 §五）代为加 `Bearer`。
+**思路：** `fetch` + `ReadableStream` 解析 **SSE**（或 CloudBase 整块 JSON）。开发环境：`DEEPSEEK_API_URL` + `Authorization` 头。**生产环境**（`import.meta.env.PROD`）：经 **`getAiEndpoint()`** 选择 **`AI_PROXY_URL`**（CloudBase 常为 **`https://{envId}.service.tcloudbase.com/ai`**）或同源 **`POST /api/ai`**；**不在请求中带 Key**，由云函数 / 网关代加 `Bearer`。
 
-**与 `AI_PROXY_URL`（`defaultConfig.ts`）的关系：** **`streamingAIService` 当前并不读取 `AI_PROXY_URL`。** CloudBase HTTP 域名典型为 `{env}.{region}.tcloudbaseapp.com/ai`，与静态站 **不同源**；若生产构建未把 AI 反向代理回 `/api/ai`，则需 **改此处 URL 或通过网关统一域名**。非流式的 `aiService` 已改用 `AI_PROXY_URL` / 直连。**建议后续合并为单一 `getAIEndpoint()`。**
+**与 `AI_PROXY_URL`：** 生产下已统一使用 **`AI_PROXY_URL`**（或 `/api/ai`）。CloudBase 下 AI/TTS 走 **云函数 HTTP 访问域名**（`*.service.tcloudbase.com`），与同环境静态站 **`*.tcloudbaseapp.com` 往往不同源**；云函数已设 **`Access-Control-Allow-Origin: *`**。也可用手写 **`VITE_AI_API_URL` / `VITE_TTS_API_URL`** 覆盖。
 
 
 **Prompt：** `getSystemPrompt()` 从 `characterStore` 拉取，实现 **与人设模块单一数据源**。
@@ -484,8 +484,10 @@ const blobUrl = URL.createObjectURL(new Blob([merged]))
 ```
 构建时注入 VITE_CLOUDBASE_ENV_ID
     ↓
-AI_PROXY_URL = https://{envId}.ap-shanghai.tcloudbaseapp.com/ai
-TTS_PROXY_URL = https://{envId}.ap-shanghai.tcloudbaseapp.com/tts
+AI_PROXY_URL = https://{envId}.service.tcloudbase.com/ai   （CLI: tcb fn deploy --path /ai）
+TTS_PROXY_URL = https://{envId}.service.tcloudbase.com/tts （CLI: --path /tts）
+
+（静态网站托管默认域名为 *.tcloudbaseapp.com ，与上述云函数访问域名不同，属正常）
 
 开发环境（PROD=false）：
   AI  → 直调 api.deepseek.com（带明文 Key）
