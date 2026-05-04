@@ -16,6 +16,7 @@
     "login:tcb": "tcb login"
   },
   "dependencies": {
+    "@cloudbase/js-sdk": "^2.28.3",
     "@pixiv/three-vrm": "^3.4.4",
     "@pixiv/three-vrm-animation": "^3.5.2",
     "axios": "^1.6.2",

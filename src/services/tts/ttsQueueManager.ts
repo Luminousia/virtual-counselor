@@ -6,6 +6,7 @@
 import { LipSyncAnalyzer, LipSyncResult } from '../../utils/lipSyncAnalyzer'
 import { useTTSConfigStore, TTSConfig } from '../../store/apiConfigStore'
 import { BUILTIN_MINIMAX_TTS_KEY, DEFAULT_EMOTION_MAP, TTS_PROXY_URL } from '../../store/defaultConfig'
+import { callCloudFunction, isCloudBaseEnv } from '../cloudbaseClient'
 
 export interface AudioChunk {
   text: string
@@ -393,19 +394,6 @@ export class TTSQueueManager {
     config: TTSConfig,
     signal: AbortSignal
   ): Promise<Response> {
-    // 生产环境：走 TTS_PROXY_URL（CloudBase 云函数 或 /api/tts，Key 存服务端）
-    // 开发环境：走 Vite 代理 /__minimax-tts（避免 CORS）
-    const isProd = import.meta.env.PROD
-    const url = isProd ? TTS_PROXY_URL : '/__minimax-tts/v1/t2a_v2'
-    const apiKey = isProd ? '' : ((config.apiKey || '').trim() || BUILTIN_MINIMAX_TTS_KEY)
-    
-    console.log('[TTSQueue] 调用 MiniMax TTS:', {
-      voice: config.voice,
-      emotion,
-      textLength: text.length,
-      apiKeyPrefix: apiKey.substring(0, 10) + '...',
-    })
-    
     const requestBody = {
       model: 'speech-01-turbo',
       text,
@@ -413,7 +401,7 @@ export class TTSQueueManager {
       voice_setting: {
         voice_id: config.voice || 'female-shaonv',
         speed: config.speed || 1.0,
-        vol: (config.volume || 1) * 10, // MiniMax vol 范围是 0-10
+        vol: (config.volume || 1) * 10,
         pitch: config.pitch || 0,
         emotion,
       },
@@ -423,9 +411,29 @@ export class TTSQueueManager {
         format: 'mp3',
       },
     }
-    
-    console.log('[TTSQueue] MiniMax 请求体:', JSON.stringify(requestBody, null, 2))
-    
+
+    // ── CloudBase SDK 调用：绕过 CORS ──
+    if (isCloudBaseEnv()) {
+      type TTSResult = { data?: { audio?: string }; base_resp?: { status_code?: number; status_msg?: string } }
+      const result = await callCloudFunction<TTSResult>('tts', requestBody as unknown as Record<string, unknown>)
+      if (!result) throw new Error('CloudBase TTS 调用失败（callFunction 返回 null）')
+      if (result.base_resp?.status_code !== 0) {
+        throw new Error(`MiniMax TTS 错误: ${result.base_resp?.status_msg || '未知'}`)
+      }
+      const audio = result.data?.audio
+      if (!audio) throw new Error('CloudBase TTS 返回数据中没有音频')
+      // 将 base64 包装成 Response 供后续统一处理
+      const jsonStr = JSON.stringify(result)
+      return new Response(jsonStr, { status: 200, headers: { 'Content-Type': 'application/json' } })
+    }
+
+    // ── HTTP 调用（开发或非 CloudBase 生产）──
+    const isProd = import.meta.env.PROD
+    const url = isProd ? TTS_PROXY_URL : '/__minimax-tts/v1/t2a_v2'
+    const apiKey = isProd ? '' : ((config.apiKey || '').trim() || BUILTIN_MINIMAX_TTS_KEY)
+
+    console.log('[TTSQueue] 调用 MiniMax TTS:', { voice: config.voice, emotion, textLength: text.length })
+
     const headers: Record<string, string> = { 'Content-Type': 'application/json' }
     if (apiKey) headers['Authorization'] = `Bearer ${apiKey}`
 

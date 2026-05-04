@@ -1,38 +1,48 @@
 'use strict'
 
-const express = require('express')
 const https = require('https')
-
 const MINIMAX_URL = 'https://api.minimaxi.com/v1/t2a_v2'
-const PORT = process.env.PORT || 9000
 
-const app = express()
-
-app.use((req, res, next) => {
-  res.setHeader('Access-Control-Allow-Origin', '*')
-  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS')
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, Accept, X-Requested-With')
-  res.setHeader('Access-Control-Max-Age', '86400')
-  if (req.method === 'OPTIONS') return res.status(204).end()
-  next()
-})
-
-app.use(express.json({ limit: '2mb' }))
-
-app.post('*', async (req, res) => {
+/**
+ * 支持两种调用方式：
+ *   1. CloudBase JS SDK callFunction → event 即传入的 data 对象（无 httpMethod）
+ *   2. HTTP 访问服务 → event.body 为 JSON 字符串
+ */
+exports.main = async (event = {}) => {
   const apiKey = process.env.MINIMAX_TTS_KEY
-  if (!apiKey) {
-    return res.status(500).json({ error: 'MINIMAX_TTS_KEY not configured on server' })
+  if (!apiKey) return { error: 'MINIMAX_TTS_KEY not configured on server' }
+
+  let body
+  if (event.httpMethod) {
+    if (event.httpMethod === 'OPTIONS') {
+      return { statusCode: 204, headers: corsHeaders(), body: '' }
+    }
+    try {
+      body = typeof event.body === 'string' ? JSON.parse(event.body || '{}') : (event.body || {})
+    } catch {
+      return { statusCode: 400, headers: corsHeaders(), body: JSON.stringify({ error: 'Invalid JSON body' }) }
+    }
+  } else {
+    body = event
   }
 
-  const body = req.body || {}
   try {
     const result = await post(MINIMAX_URL, body, apiKey)
-    res.json(result)
+    if (event.httpMethod) {
+      return {
+        statusCode: 200,
+        headers: { 'Content-Type': 'application/json', ...corsHeaders() },
+        body: JSON.stringify(result),
+      }
+    }
+    return result
   } catch (e) {
-    res.status(502).json({ error: e.message })
+    if (event.httpMethod) {
+      return { statusCode: 502, headers: corsHeaders(), body: JSON.stringify({ error: e.message }) }
+    }
+    return { error: e.message }
   }
-})
+}
 
 function post(url, data, apiKey) {
   return new Promise((resolve, reject) => {
@@ -49,12 +59,12 @@ function post(url, data, apiKey) {
           'Content-Length': Buffer.byteLength(payload),
         },
       },
-      (upRes) => {
+      (res) => {
         let buf = ''
-        upRes.on('data', (d) => (buf += d))
-        upRes.on('end', () => {
-          if (upRes.statusCode < 200 || upRes.statusCode >= 300) {
-            return reject(new Error(`Upstream ${upRes.statusCode}: ${buf.slice(0, 400)}`))
+        res.on('data', (d) => (buf += d))
+        res.on('end', () => {
+          if (res.statusCode < 200 || res.statusCode >= 300) {
+            return reject(new Error(`Upstream ${res.statusCode}: ${buf.slice(0, 400)}`))
           }
           try { resolve(JSON.parse(buf)) }
           catch { reject(new Error(`Upstream non-JSON: ${buf.slice(0, 200)}`)) }
@@ -67,4 +77,11 @@ function post(url, data, apiKey) {
   })
 }
 
-app.listen(PORT, () => console.log(`[tts] listening on ${PORT}`))
+function corsHeaders() {
+  return {
+    'Access-Control-Allow-Origin': '*',
+    'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
+    'Access-Control-Allow-Headers': 'Content-Type, Authorization, Accept',
+    'Access-Control-Max-Age': '86400',
+  }
+}

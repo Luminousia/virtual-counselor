@@ -6,6 +6,7 @@
 import { useCharacterStore } from '../../store/characterStore'
 import { useAIConfigStore } from '../../store/aiConfigStore'
 import { BUILTIN_DEEPSEEK_AI_KEY, DEEPSEEK_API_URL, AI_PROXY_URL } from '../../store/defaultConfig'
+import { callCloudFunction, isCloudBaseEnv } from '../cloudbaseClient'
 
 export interface StreamingMessage {
   role: 'user' | 'assistant' | 'system'
@@ -72,6 +73,25 @@ class StreamingAIService {
 
     try {
       const { apiUrl, apiKey, model, temperature, maxTokens, jsonMode } = config
+
+      // ── CloudBase SDK 调用（生产环境 + VITE_CLOUDBASE_ENV_ID）：绕过 CORS ──
+      if (isCloudBaseEnv()) {
+        type AIResult = { choices?: Array<{ message?: { content?: string } }> }
+        const data = await callCloudFunction<AIResult>('ai', {
+          model,
+          messages,
+          temperature,
+          max_tokens: maxTokens,
+          stream: false,
+        })
+        const fullText = data?.choices?.[0]?.message?.content?.trim() ?? ''
+        if (fullText) onChunk(fullText)
+        this.conversationHistory.push({ role: 'user', content: userMessage })
+        if (fullText) this.conversationHistory.push({ role: 'assistant', content: fullText })
+        if (this.conversationHistory.length > 20) this.conversationHistory = this.conversationHistory.slice(-20)
+        onComplete(fullText)
+        return
+      }
 
       const headers: Record<string, string> = { 'Content-Type': 'application/json' }
       if (!import.meta.env.PROD) {

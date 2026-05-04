@@ -1,78 +1,52 @@
 'use strict'
 
-const express = require('express')
 const https = require('https')
-
 const DEEPSEEK_URL = 'https://api.deepseek.com/v1/chat/completions'
-const PORT = process.env.PORT || 9000
 
-const app = express()
-
-app.use((req, res, next) => {
-  res.setHeader('Access-Control-Allow-Origin', '*')
-  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS')
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, Accept, X-Requested-With')
-  res.setHeader('Access-Control-Max-Age', '86400')
-  if (req.method === 'OPTIONS') return res.status(204).end()
-  next()
-})
-
-app.use(express.json({ limit: '2mb' }))
-
-app.post('*', async (req, res) => {
+/**
+ * 支持两种调用方式：
+ *   1. CloudBase JS SDK callFunction → event 即传入的 data 对象（无 httpMethod）
+ *   2. HTTP 访问服务（service.tcloudbase.com）→ event.body 为 JSON 字符串
+ */
+exports.main = async (event = {}) => {
   const apiKey = process.env.DEEPSEEK_API_KEY
-  if (!apiKey) {
-    return res.status(500).json({ error: 'DEEPSEEK_API_KEY not configured on server' })
-  }
+  if (!apiKey) return { error: 'DEEPSEEK_API_KEY not configured on server' }
 
-  const body = req.body || {}
-  const wantStream = body.stream === true
-
-  if (!wantStream) {
-    try {
-      const result = await postJsonUpstream({ ...body, stream: false }, apiKey)
-      return res.json(result)
-    } catch (e) {
-      return res.status(502).json({ error: e.message })
+  // 区分 SDK 调用 vs HTTP 调用
+  let body
+  if (event.httpMethod) {
+    if (event.httpMethod === 'OPTIONS') {
+      return { statusCode: 204, headers: corsHeaders(), body: '' }
     }
+    try {
+      body = typeof event.body === 'string' ? JSON.parse(event.body || '{}') : (event.body || {})
+    } catch {
+      return { statusCode: 400, headers: corsHeaders(), body: JSON.stringify({ error: 'Invalid JSON body' }) }
+    }
+  } else {
+    // SDK 调用：event 就是 data
+    body = event
   }
 
-  // SSE 透传
+  body = { ...body, stream: false }
+
   try {
-    const upRes = await fetch(DEEPSEEK_URL, {
-      method: 'POST',
-      headers: {
-        Authorization: `Bearer ${apiKey}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({ ...body, stream: true }),
-    })
-
-    if (!upRes.ok) {
-      const txt = await upRes.text().catch(() => '')
-      return res.status(upRes.status).json({ error: `Upstream ${upRes.status}: ${txt.slice(0, 400)}` })
-    }
-
-    res.setHeader('Content-Type', 'text/event-stream; charset=utf-8')
-    res.setHeader('Cache-Control', 'no-cache')
-    res.setHeader('Connection', 'keep-alive')
-
-    const reader = upRes.body.getReader()
-    const dec = new TextDecoder()
-    try {
-      while (true) {
-        const { done, value } = await reader.read()
-        if (done) break
-        res.write(dec.decode(value, { stream: true }))
+    const result = await postJsonUpstream(body, apiKey)
+    if (event.httpMethod) {
+      return {
+        statusCode: 200,
+        headers: { 'Content-Type': 'application/json', ...corsHeaders() },
+        body: JSON.stringify(result),
       }
-    } finally {
-      reader.releaseLock()
-      res.end()
     }
+    return result
   } catch (e) {
-    if (!res.headersSent) res.status(502).json({ error: e.message })
+    if (event.httpMethod) {
+      return { statusCode: 502, headers: corsHeaders(), body: JSON.stringify({ error: e.message }) }
+    }
+    return { error: e.message }
   }
-})
+}
 
 function postJsonUpstream(data, apiKey) {
   return new Promise((resolve, reject) => {
@@ -89,14 +63,14 @@ function postJsonUpstream(data, apiKey) {
           'Content-Length': Buffer.byteLength(payload),
         },
       },
-      (upRes) => {
+      (res) => {
         let buf = ''
-        upRes.on('data', (d) => (buf += d))
-        upRes.on('end', () => {
-          if (upRes.statusCode < 200 || upRes.statusCode >= 300) {
+        res.on('data', (d) => (buf += d))
+        res.on('end', () => {
+          if (res.statusCode < 200 || res.statusCode >= 300) {
             let msg = buf.slice(0, 400)
             try { msg = JSON.parse(buf)?.error?.message || msg } catch { /**/ }
-            return reject(new Error(`Upstream ${upRes.statusCode}: ${msg}`))
+            return reject(new Error(`Upstream ${res.statusCode}: ${msg}`))
           }
           try { resolve(JSON.parse(buf)) }
           catch { reject(new Error(`Upstream non-JSON: ${buf.slice(0, 200)}`)) }
@@ -109,4 +83,11 @@ function postJsonUpstream(data, apiKey) {
   })
 }
 
-app.listen(PORT, () => console.log(`[ai] listening on ${PORT}`))
+function corsHeaders() {
+  return {
+    'Access-Control-Allow-Origin': '*',
+    'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
+    'Access-Control-Allow-Headers': 'Content-Type, Authorization, Accept',
+    'Access-Control-Max-Age': '86400',
+  }
+}
