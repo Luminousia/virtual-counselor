@@ -1,6 +1,8 @@
 {
-  "name": "ai",
+  "name": "ai-function",
   "version": "1.0.0",
-  "description": "DeepSeek AI proxy for CloudBase",
-  "main": "index.js"
+  "main": "index.js",
+  "dependencies": {
+    "express": "^4.19.2"
+  }
 }
